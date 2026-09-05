@@ -1,0 +1,14 @@
+node_modules/
+dist/
+dist-client/
+*.log
+.DS_Store
+.env
+.env.local
+# 本机数据绝不入库
+know-know.sqlite
+know-know.sqlite-*
+backups/
+exports/
+data/
+.omc/

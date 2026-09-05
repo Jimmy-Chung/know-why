@@ -1,0 +1,1632 @@
+<!doctype html>
+<html lang="en" data-visualize-standalone>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; style-src 'unsafe-inline' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src blob: data:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Know Know 1.0 · 交互原型</title>
+<style>:root{color-scheme:light dark;background:light-dark(rgb(255 255 255), rgb(24 24 24))}html,body{margin:0}body{box-sizing:border-box;padding:1rem;background:inherit}iframe{display:block;width:100%;height:calc(100vh - 2rem);margin:0 auto;border:0}</style>
+</head>
+<body>
+<iframe sandbox="allow-scripts" referrerpolicy="no-referrer" title="Know Know 1.0 · 交互原型" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot; data-visualize-standalone&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+&lt;meta name=&quot;referrer&quot; content=&quot;no-referrer&quot;&gt;
+&lt;meta http-equiv=&quot;Content-Security-Policy&quot; content=&quot;default-src &#x27;none&#x27;; script-src &#x27;unsafe-inline&#x27; &#x27;unsafe-eval&#x27; &#x27;wasm-unsafe-eval&#x27; blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; style-src &#x27;unsafe-inline&#x27; blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src blob: data:; frame-src &#x27;none&#x27;; object-src &#x27;none&#x27;; base-uri &#x27;none&#x27;; form-action &#x27;none&#x27;&quot;&gt;
+&lt;title&gt;Know Know 1.0 · 交互原型&lt;/title&gt;
+&lt;style&gt;:root {
+  color-scheme: light dark;
+  background-color: var(
+    --background,
+    var(--color-background-primary, light-dark(rgb(255 255 255), rgb(24 24 24)))
+  ) !important;
+
+  /* Agent-facing contract; keep in sync with SKILL.md. */
+  --background: var(
+    --color-background-primary,
+    light-dark(rgb(255 255 255), rgb(24 24 24))
+  );
+  --foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --card: color-mix(in oklab, var(--foreground) 5%, var(--background));
+  --card-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --popover: var(
+    --color-background-secondary,
+    light-dark(rgb(255 255 255), rgb(45 45 45))
+  );
+  --popover-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --primary: var(
+    --color-text-info,
+    light-dark(rgb(51 156 255), rgb(131 195 255))
+  );
+  --primary-foreground: var(
+    --color-text-inverse,
+    light-dark(rgb(255 255 255), rgb(13 13 13))
+  );
+  --secondary: var(
+    --color-background-secondary,
+    light-dark(rgb(255 255 255 / 96%), rgb(54 54 54 / 96%))
+  );
+  --secondary-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --muted: color-mix(in srgb, var(--foreground) 10%, transparent);
+  --muted-foreground: var(
+    --color-text-secondary,
+    light-dark(rgb(26 28 31 / 49.4%), rgb(255 255 255 / 49.8%))
+  );
+  --accent: var(
+    --color-background-info,
+    light-dark(rgb(229 242 255), rgb(13 39 63))
+  );
+  --accent-foreground: var(
+    --color-text-info,
+    light-dark(rgb(51 156 255), rgb(131 195 255))
+  );
+  --destructive: var(
+    --color-text-warning,
+    light-dark(rgb(226 85 7), rgb(255 133 73))
+  );
+  --border: var(
+    --color-border-secondary,
+    light-dark(rgb(26 28 31 / 8%), rgb(255 255 255 / 8.2%))
+  );
+  --input: var(
+    --color-border-primary,
+    light-dark(
+      rgb(26 28 31 / 11.8%),
+      color-mix(in oklab, rgb(0 0 0) 10%, transparent)
+    )
+  );
+  --ring: var(
+    --color-ring-primary,
+    light-dark(rgb(51 156 255), rgb(131 195 255 / 76%))
+  );
+  --font-size-base: var(--font-text-md-size, 14px);
+  --blue: light-dark(rgb(51 156 255), rgb(51 156 255));
+  --orange: light-dark(rgb(226 85 7), rgb(251 106 34));
+  --green: light-dark(rgb(0 162 64), rgb(64 201 119));
+  --red: light-dark(rgb(224 46 42), rgb(255 103 100));
+  --purple: light-dark(rgb(146 79 247), rgb(173 123 249));
+  --yellow: light-dark(rgb(255 195 0), rgb(255 210 64));
+  --viz-series-1: var(--primary);
+  --viz-series-2: light-dark(rgb(243 136 59), rgb(245 154 86));
+  --viz-series-3: light-dark(rgb(93 201 119), rgb(116 213 139));
+  --viz-series-4: light-dark(rgb(235 119 177), rgb(240 143 192));
+  --viz-series-5: light-dark(rgb(155 121 236), rgb(170 145 239));
+  --viz-series-6: light-dark(rgb(58 185 177), rgb(90 203 194));
+
+  /* Internal implementation variables; not part of the agent contract. */
+  --font-sans: -apple-system, system-ui, &quot;Segoe UI&quot;, sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, &quot;SF Mono&quot;, Menlo, Consolas, &quot;Liberation Mono&quot;,
+    monospace;
+  --font-size-normal: max(11px, var(--font-size-base));
+  --font-size-tooltip: calc(var(--font-size-base) - 1px);
+  --font-size-small: max(11px, calc(var(--font-size-base) - 2px));
+  --font-size-h1: calc(var(--font-size-normal) * 1.7142857143);
+  --font-size-h2: calc(var(--font-size-normal) * 1.4285714286);
+  --font-size-h3: calc(var(--font-size-normal) * 1.2857142857);
+  --font-weight-normal: 430;
+  --font-weight-medium: 500;
+  --icon-size: 16px;
+  --line-height-normal: calc(var(--font-size-normal) * 1.5);
+  --line-height-tooltip: calc(var(--font-size-tooltip) * 1.4285714286);
+  --line-height-small: calc(var(--font-size-small) + 4px);
+  --corner-shape: round;
+  --radius: var(--border-radius-lg, 10px);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-2xl: calc(var(--radius) * 1.6);
+  --radius-full: 9999px;
+  --shadow-sm: 0 1px 2px -1px rgb(0 0 0 / 8%);
+  --checkmark-image: url(&quot;data:image/svg+xml,%3Csvg xmlns=&#x27;http://www.w3.org/2000/svg&#x27; viewBox=&#x27;0 0 17 17&#x27;%3E%3Cpath d=&#x27;M12.8961 3.64101C13.1297 3.41418 13.4984 3.37523 13.7779 3.56581C14.0571 3.75635 14.1554 4.11331 14.0299 4.41347L13.9615 4.53847L7.71151 13.7045C7.59411 13.8767 7.4063 13.9877 7.19881 14.0072C6.99136 14.0267 6.78564 13.9533 6.63826 13.806L2.88826 10.056L2.79842 9.9457C2.6192 9.67407 2.64927 9.30496 2.88826 9.06581C3.12738 8.82669 3.49647 8.79676 3.76815 8.97597L3.8785 9.06581L7.03084 12.2182L12.8053 3.74941L12.8961 3.64101Z&#x27;/%3E%3C/svg%3E&quot;);
+
+  /* Legacy aliases; not part of the current agent contract. */
+  --viz-bg: transparent;
+  --viz-panel: var(--card);
+  --viz-border: var(--border);
+  --viz-text: var(--foreground);
+  --viz-muted: var(--muted-foreground);
+  --viz-accent: var(--primary);
+  --viz-accent-text: var(--primary-foreground);
+  --viz-accent-bg: var(--accent);
+  --viz-font-size: var(--font-size-base);
+  --viz-warning: var(--destructive);
+}
+
+:root[data-theme=&quot;light&quot;] {
+  color-scheme: light;
+}
+
+:root[data-theme=&quot;dark&quot;] {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html &gt; body {
+  /* Preserve MCP aliases for older inline renderers without creating :root cycles. */
+  --color-background-primary: var(
+    --background,
+    light-dark(rgb(255 255 255), rgb(24 24 24))
+  );
+  --color-text-primary: var(
+    --foreground,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --color-border-secondary: var(
+    --border,
+    light-dark(rgb(26 28 31 / 8%), rgb(255 255 255 / 8.2%))
+  );
+
+  margin: 0;
+  padding: var(--visualize-paint-gutter, 0px);
+  color: var(--foreground);
+  background: transparent !important;
+  font-family: var(--font-sans) !important;
+  font-size: var(--font-size-normal);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-normal);
+}
+
+a {
+  color: color-mix(in srgb, var(--viz-accent) 80%, var(--viz-text) 20%);
+  cursor: pointer;
+  font-weight: var(--font-weight-medium, 500);
+  text-decoration: none;
+  text-underline-offset: 2px;
+}
+
+a:is(:hover, :focus-visible) {
+  text-decoration-line: underline;
+  text-decoration-style: dashed;
+  text-decoration-thickness: 0.5px;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  margin-block: 0;
+}
+
+h1 {
+  font-size: var(--font-size-h1);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+h2 {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+h3,
+h4,
+h5,
+h6 {
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.3;
+}
+
+b,
+strong,
+th {
+  font-weight: var(--font-weight-medium);
+}
+
+code:not(pre code) {
+  display: inline;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  corner-shape: var(--corner-shape);
+  background: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  overflow-wrap: anywhere;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  word-break: break-word;
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--foreground);
+  font: inherit;
+  text-align: start;
+}
+
+.table :is(th, td) {
+  padding-block: 10px;
+  padding-inline: 0 24px;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid var(--border);
+  text-align: start;
+  vertical-align: top;
+}
+
+.table-responsive &gt; .table :is(th, td) {
+  overflow-wrap: break-word;
+}
+
+.table :is(th, td):last-child {
+  padding-inline-end: 0;
+}
+
+.table :is(caption, thead th) {
+  font-weight: 600;
+}
+
+.table thead th {
+  padding-block: 8px;
+  border-bottom-color: color-mix(in srgb, var(--foreground) 16%, transparent);
+}
+
+.table tbody tr:last-child :is(th, td) {
+  border-bottom: 0;
+}
+
+.table.table-sm :is(th, td) {
+  padding-block: 6px;
+}
+
+.table.table-sm :is(th, td):not(:last-child) {
+  padding-inline-end: 16px;
+}
+
+.table :is(.text-end, [align=&quot;right&quot;]) {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.table :is(.text-center, [align=&quot;center&quot;]) {
+  text-align: center;
+}
+
+.table .text-nowrap {
+  white-space: nowrap;
+}
+
+#widget {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding: 0;
+  background: transparent !important;
+}
+
+.card {
+  min-width: 0;
+  padding: 12px;
+  overflow: hidden;
+  overflow-wrap: break-word;
+  border-radius: var(--radius-2xl);
+  corner-shape: var(--corner-shape);
+  color: var(--card-foreground);
+  background: var(--card);
+}
+
+#widget &gt; :not(.card, .progress) {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.tooltip {
+  position: fixed;
+  z-index: 50;
+  top: 0;
+  left: 0;
+  width: max-content;
+  max-width: min(
+    20rem,
+    var(--tooltip-available-width, calc(100vw - 10px)),
+    calc(100vw - 10px)
+  );
+  max-height: min(
+    var(--tooltip-available-height, calc(100vh - 10px)),
+    calc(100vh - 10px)
+  );
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  corner-shape: var(--corner-shape);
+  color: var(--popover-foreground);
+  background: var(--popover);
+  box-shadow: none;
+  font-size: var(--font-size-tooltip);
+  line-height: var(--line-height-tooltip);
+  overflow-wrap: break-word;
+  white-space: normal;
+  pointer-events: none;
+  user-select: none;
+}
+
+.viz-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(max(180px, 24%), 1fr));
+  gap: 10px;
+}
+
+.viz-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.viz-stat-value {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+.viz-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+hr {
+  width: 100%;
+  height: 1px;
+  margin-block: 6px;
+  border: 0;
+  background: var(--border);
+}
+
+.nav {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+}
+
+.progress {
+  display: flex;
+  height: 8px;
+  margin-block: calc((var(--line-height-normal, 1.5em) - 8px) / 2);
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--muted);
+}
+
+.progress-bar:only-child {
+  border-radius: var(--radius-full);
+}
+
+.progress-bar {
+  height: 100%;
+  flex-shrink: 0;
+  border: 0;
+  background: var(--viz-series-1);
+}
+
+.viz-badge {
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  color: var(--accent-foreground);
+  background: var(--accent);
+  font-weight: var(--font-weight-medium);
+}
+
+small,
+.text-small,
+.viz-badge {
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-small);
+}
+
+.text-muted {
+  color: var(--muted-foreground);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.viz-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.viz-controls &gt; .form-label {
+  display: grid;
+  min-width: min(100%, 260px);
+  flex: 1 1 280px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 2px 12px;
+  margin-bottom: 0;
+}
+
+.viz-controls &gt; .form-label &gt; :is(.form-control, .form-range, .form-select) {
+  grid-column: 1 / -1;
+}
+
+.btn,
+.nav-link,
+.form-check-input,
+.form-control,
+.form-range,
+.form-select {
+  font: inherit;
+}
+
+.btn,
+.nav-link {
+  appearance: button;
+  display: inline-flex;
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  min-height: 28px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0 8px;
+  -webkit-app-region: no-drag;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: var(--corner-shape);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  cursor: var(--cursor-interaction, pointer);
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+.btn:is(.btn-block, .viz-tile) {
+  inline-size: 100%;
+}
+
+.btn.viz-tile {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+a.btn {
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn:not(:disabled):hover,
+.nav-link:not(:disabled):not([aria-disabled=&quot;true&quot;]):hover {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.btn-primary {
+  border-color: transparent;
+  color: var(--primary-foreground);
+  background: var(--foreground);
+  background-clip: padding-box;
+}
+
+.btn-primary .text-muted {
+  color: color-mix(in srgb, var(--primary-foreground) 50%, transparent);
+}
+
+.btn-primary:not(:disabled):hover {
+  background: color-mix(in srgb, var(--foreground) 80%, transparent);
+  background-clip: padding-box;
+}
+
+.btn-ghost {
+  border-color: transparent;
+  color: var(--muted-foreground);
+  background: transparent;
+}
+
+.btn-ghost:not(:disabled):hover {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.nav-pills .nav-link {
+  min-width: 0;
+  border-color: transparent;
+  color: var(--muted-foreground);
+  background: transparent;
+}
+
+.nav-justified .nav-link {
+  flex: 1 1 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.nav-pills .nav-link.active {
+  color: var(--foreground);
+  background: var(--muted);
+}
+
+.btn:disabled,
+.nav-link:disabled,
+.nav-link[aria-disabled=&quot;true&quot;] {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+[data-lucide] {
+  stroke-width: 1.6;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--foreground);
+}
+
+.form-control {
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  padding: 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: var(--corner-shape);
+  color: var(--foreground);
+  background: var(--secondary);
+}
+
+.form-control::placeholder {
+  color: var(--muted-foreground);
+}
+
+.form-control[type=&quot;file&quot;] {
+  padding: 0;
+  overflow: hidden;
+  cursor: var(--cursor-interaction, pointer);
+}
+
+.form-control[type=&quot;file&quot;]::file-selector-button {
+  min-height: 26px;
+  margin-right: 8px;
+  padding: 0 8px;
+  border: 0;
+  border-right: 1px solid var(--input);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  cursor: inherit;
+  font: inherit;
+}
+
+.form-control[type=&quot;file&quot;]:not(:disabled):hover::file-selector-button {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.form-control-color[type=&quot;color&quot;] {
+  width: 40px;
+  height: 28px;
+  padding: 3px;
+  cursor: var(--cursor-interaction, pointer);
+}
+
+.form-control-color[type=&quot;color&quot;]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.form-control-color[type=&quot;color&quot;]::-webkit-color-swatch {
+  border: 0;
+  border-radius: calc(var(--radius-lg) - 4px);
+  corner-shape: var(--corner-shape);
+}
+
+textarea.form-control {
+  height: auto;
+  min-height: 72px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+.form-control:focus-visible {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-control:disabled,
+.form-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.form-select {
+  appearance: none;
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  margin: 0;
+  padding: 0 32px 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: var(--corner-shape);
+  color: var(--foreground);
+  background-color: var(--secondary);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted-foreground) 50%),
+    linear-gradient(135deg, var(--muted-foreground) 50%, transparent 50%);
+  background-position:
+    calc(100% - 14px) 50%,
+    calc(100% - 10px) 50%;
+  background-repeat: no-repeat;
+  background-size: 4px 4px;
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-select:not(:disabled):hover {
+  background-color: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.form-select:focus-visible {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-check {
+  display: flex;
+  min-height: 20px;
+  align-items: center;
+  gap: 6px;
+}
+
+.form-check-input {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  margin: 0;
+  border: 1px solid var(--input);
+  color: var(--primary-foreground);
+  background-color: transparent;
+  cursor: var(--cursor-interaction, default);
+  transition:
+    background-color 150ms,
+    border-color 150ms,
+    box-shadow 150ms;
+}
+
+.form-check:not(.form-switch) .form-check-input[type=&quot;checkbox&quot;] {
+  border-color: var(--input);
+  border-radius: var(--radius-sm);
+  corner-shape: var(--corner-shape);
+  background-color: var(--secondary);
+  box-shadow: var(--shadow-sm);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input:not(:disabled):not(:checked):hover {
+  background-color: var(--card);
+}
+
+.form-check:not(.form-switch) .form-check-input[type=&quot;checkbox&quot;]:checked {
+  border-color: var(--primary);
+  background-color: var(--primary);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input[type=&quot;checkbox&quot;]:checked::before {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--primary-foreground);
+  content: &quot;&quot;;
+  mask: var(--checkmark-image) center / 12px 12px no-repeat;
+}
+
+.form-check-input[type=&quot;radio&quot;] {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-full);
+}
+
+.form-check-input[type=&quot;radio&quot;]:checked {
+  border: 2px solid var(--primary);
+  background:
+    radial-gradient(circle, var(--primary-foreground) 0 2.5px, transparent 3px),
+    var(--primary);
+}
+
+.form-check:not(.form-switch) .form-check-input:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled {
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+}
+
+.form-switch .form-check-input:disabled,
+.form-switch .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.form-check-label {
+  color: var(--foreground);
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-switch .form-check-input {
+  position: relative;
+  width: 32px;
+  height: 20px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--muted);
+  box-shadow: none;
+  transition: background-color 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input::before {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border: 1px solid light-dark(var(--primary-foreground), var(--foreground));
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+  box-shadow: var(--shadow-sm);
+  content: &quot;&quot;;
+  transform: translate(2px, -50%);
+  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input:checked {
+  background: var(--primary);
+}
+
+.form-switch .form-check-input:checked::before {
+  transform: translate(14px, -50%);
+}
+
+.form-switch .form-check-input:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.form-range {
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 28px;
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  outline: none;
+  border: 0;
+  accent-color: var(--primary);
+  background: linear-gradient(
+      color-mix(in srgb, var(--foreground) 7%, transparent),
+      color-mix(in srgb, var(--foreground) 7%, transparent)
+    )
+    center / 100% 2px no-repeat;
+}
+
+.form-range::-webkit-slider-runnable-track {
+  height: 28px;
+  background: transparent;
+}
+
+.form-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+}
+
+.form-range:focus-visible::-webkit-slider-thumb {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-range::-moz-range-track {
+  height: 28px;
+  background: transparent;
+}
+
+.form-range::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+}
+
+.form-range:focus-visible::-moz-range-thumb {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-range:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.btn:not(.btn-primary, .viz-tile):is(
+  [aria-pressed=&quot;true&quot;],
+  [aria-selected=&quot;true&quot;],
+  .is-selected
+) {
+  border-color: var(--primary);
+  color: var(--primary-foreground);
+  background: var(--primary);
+}
+
+.btn.viz-tile:is([aria-pressed=&quot;true&quot;], [aria-selected=&quot;true&quot;], .is-selected) {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+
+.btn:focus-visible,
+.nav-link:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+@media (pointer: coarse) {
+  .btn,
+  .nav-link,
+  .form-control,
+  .form-select {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* Keep small-screen WebKit from zooming when a text field receives focus. */
+  .form-control,
+  .form-select {
+    font-size: max(16px, var(--font-size-normal));
+  }
+
+  .form-control[type=&quot;file&quot;]::file-selector-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .form-control-color[type=&quot;color&quot;] {
+    width: 44px;
+    height: 44px;
+  }
+
+  .form-control:is(
+    [type=&quot;date&quot;],
+    [type=&quot;datetime-local&quot;],
+    [type=&quot;month&quot;],
+    [type=&quot;time&quot;],
+    [type=&quot;week&quot;]
+  ) {
+    min-width: 0;
+    max-width: 100%;
+    padding-block: 8px;
+  }
+
+  .form-check {
+    min-height: 44px;
+    padding-inline: 15px;
+  }
+
+  .form-check-input {
+    position: relative;
+  }
+
+  .form-check-input::after {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 44px;
+    height: 44px;
+    content: &quot;&quot;;
+    transform: translate(-50%, -50%);
+  }
+
+  .form-check-label {
+    display: inline-flex;
+    min-width: 44px;
+    min-height: 44px;
+    align-items: center;
+  }
+
+  .form-range {
+    height: 44px;
+    touch-action: pan-y;
+  }
+
+  .form-range::-webkit-slider-runnable-track {
+    height: 44px;
+  }
+
+  .form-range::-moz-range-track {
+    height: 44px;
+  }
+
+  .form-range::-webkit-slider-thumb {
+    margin-top: 12px;
+  }
+}
+
+svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+#widget &gt; svg {
+  width: 100%;
+}
+
+/* Model-authored chart rules can otherwise stretch icons after these styles load. */
+svg.lucide {
+  display: block;
+  width: var(--icon-size) !important;
+  height: var(--icon-size) !important;
+  flex: none;
+  margin: 0 !important;
+  stroke-width: 1.6;
+}
+
+.text-warning,
+.text-destructive {
+  color: var(--destructive);
+}
+
+html&gt;body{padding:0}&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div id=&quot;kk-prototype&quot; aria-label=&quot;Know Know 知识探索交互预览&quot;&gt;
+  &lt;div class=&quot;kk-preview&quot;&gt;&lt;span&gt;交互预览 &lt;small&gt;04 / 引用与探索&lt;/small&gt;&lt;/span&gt;&lt;div class=&quot;kk-scenes&quot; aria-label=&quot;关键界面&quot;&gt;&lt;button data-scene=&quot;new&quot;&gt;01 新会话&lt;/button&gt;&lt;button data-scene=&quot;explore&quot;&gt;02 选词探索&lt;/button&gt;&lt;button data-scene=&quot;deep&quot;&gt;03 多层分支&lt;/button&gt;&lt;button data-scene=&quot;assistant&quot;&gt;04 知识助手&lt;/button&gt;&lt;button data-scene=&quot;providers&quot;&gt;05 Provider&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;
+  &lt;div class=&quot;kk-window&quot;&gt;
+    &lt;aside class=&quot;kk-sidebar&quot; aria-label=&quot;会话导航&quot;&gt;
+      &lt;div class=&quot;kk-brand&quot;&gt;&lt;span class=&quot;kk-logo&quot;&gt;&lt;i data-lucide=&quot;git-fork&quot;&gt;&lt;/i&gt;&lt;/span&gt;&lt;span&gt;know know&lt;small&gt;让好奇心，有迹可循。&lt;/small&gt;&lt;/span&gt;&lt;/div&gt;
+      &lt;button class=&quot;kk-new&quot; data-action=&quot;new&quot;&gt;&lt;i data-lucide=&quot;plus&quot;&gt;&lt;/i&gt; 新建会话 &lt;span&gt;↗&lt;/span&gt;&lt;/button&gt;
+      &lt;div class=&quot;kk-eyebrow&quot;&gt;你的会话&lt;/div&gt;&lt;div id=&quot;kk-sessions&quot;&gt;&lt;/div&gt;
+      &lt;div class=&quot;kk-sidebar-bottom&quot;&gt;&lt;div class=&quot;kk-eyebrow&quot;&gt;模型服务 &lt;button aria-label=&quot;管理 Provider&quot; data-action=&quot;providers&quot;&gt;&lt;i data-lucide=&quot;settings-2&quot;&gt;&lt;/i&gt;&lt;/button&gt;&lt;/div&gt;&lt;div id=&quot;kk-provider-list&quot;&gt;&lt;/div&gt;&lt;button class=&quot;kk-add-provider&quot; data-action=&quot;providers&quot;&gt;&lt;i data-lucide=&quot;plus&quot;&gt;&lt;/i&gt; 管理 Provider&lt;/button&gt;&lt;div class=&quot;kk-profile&quot;&gt;&lt;span&gt;J&lt;/span&gt;&lt;div&gt;我的知识空间&lt;small&gt;个人空间&lt;/small&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;
+    &lt;/aside&gt;
+    &lt;div class=&quot;kk-workspace&quot;&gt;
+      &lt;header class=&quot;kk-header&quot;&gt;&lt;div class=&quot;kk-title-group&quot;&gt;&lt;button class=&quot;kk-mobile-menu&quot; aria-label=&quot;展开会话列表&quot; data-action=&quot;sidebar&quot;&gt;&lt;i data-lucide=&quot;panel-left&quot;&gt;&lt;/i&gt;&lt;/button&gt;&lt;span id=&quot;kk-session-title&quot;&gt;&lt;/span&gt;&lt;/div&gt;&lt;button class=&quot;kk-knowledge&quot; data-action=&quot;assistant&quot;&gt;&lt;i data-lucide=&quot;sparkles&quot;&gt;&lt;/i&gt; 会话知识助手&lt;/button&gt;&lt;/header&gt;
+      &lt;div class=&quot;kk-toolbar&quot;&gt;&lt;div id=&quot;kk-model-control&quot;&gt;&lt;/div&gt;&lt;div class=&quot;kk-capabilities&quot;&gt;&lt;label&gt;&lt;i data-lucide=&quot;globe&quot;&gt;&lt;/i&gt;&lt;select id=&quot;kk-web&quot; aria-label=&quot;联网设置&quot;&gt;&lt;option value=&quot;off&quot;&gt;联网关闭&lt;/option&gt;&lt;option value=&quot;auto&quot; selected&gt;自动联网&lt;/option&gt;&lt;option value=&quot;on&quot;&gt;强制搜索&lt;/option&gt;&lt;/select&gt;&lt;/label&gt;&lt;label&gt;&lt;i data-lucide=&quot;brain&quot;&gt;&lt;/i&gt;&lt;select id=&quot;kk-think&quot; aria-label=&quot;思考设置&quot;&gt;&lt;option value=&quot;standard&quot;&gt;标准思考&lt;/option&gt;&lt;option value=&quot;deep&quot; selected&gt;深度思考&lt;/option&gt;&lt;/select&gt;&lt;/label&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;kk-content&quot;&gt;&lt;main class=&quot;kk-main&quot;&gt;&lt;div class=&quot;kk-path&quot; id=&quot;kk-path&quot;&gt;&lt;/div&gt;&lt;div id=&quot;kk-stack&quot;&gt;&lt;/div&gt;&lt;div class=&quot;kk-hint&quot; id=&quot;kk-hint&quot;&gt;&lt;/div&gt;&lt;/main&gt;&lt;aside class=&quot;kk-tree-panel&quot; aria-label=&quot;知识分支树&quot;&gt;&lt;div class=&quot;kk-tree-heading&quot;&gt;&lt;span&gt;&lt;i data-lucide=&quot;git-branch&quot;&gt;&lt;/i&gt; 探索路径&lt;/span&gt;&lt;small id=&quot;kk-node-count&quot;&gt;&lt;/small&gt;&lt;/div&gt;&lt;div id=&quot;kk-tree&quot;&gt;&lt;/div&gt;&lt;div class=&quot;kk-tree-footer&quot;&gt;&lt;span class=&quot;kk-current-dot&quot;&gt;&lt;/span&gt; 当前卡片 &lt;span class=&quot;kk-line-key&quot;&gt;&lt;/span&gt; 探索分支&lt;/div&gt;&lt;div class=&quot;kk-tree-note&quot;&gt;每一次深入，&lt;br&gt;都可以回到起点。&lt;/div&gt;&lt;/aside&gt;&lt;/div&gt;
+      &lt;aside id=&quot;kk-assistant&quot; class=&quot;kk-assistant&quot; hidden aria-label=&quot;会话知识助手&quot;&gt;&lt;/aside&gt;
+    &lt;/div&gt;
+    &lt;div id=&quot;kk-modal&quot; class=&quot;kk-modal&quot; hidden&gt;&lt;/div&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;kk-preview-footer&quot;&gt;&lt;span&gt;&lt;span class=&quot;kk-status-dot&quot;&gt;&lt;/span&gt; 可点击演示 · 示例内容，未连接真实模型&lt;/span&gt;&lt;button id=&quot;kk-play&quot; data-action=&quot;play&quot;&gt;&lt;i data-lucide=&quot;play&quot;&gt;&lt;/i&gt; 播放探索过程&lt;/button&gt;&lt;/div&gt;
+  &lt;div id=&quot;kk-live&quot; class=&quot;kk-live&quot; role=&quot;status&quot; aria-live=&quot;polite&quot;&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;style&gt;
+#kk-prototype{--kk-bg:light-dark(#f6f7f4,#171d1a);--kk-surface:light-dark(#fff,#212924);--kk-sidebar:light-dark(#f0f2ee,#1b221e);--kk-text:light-dark(#273b32,#e1e9e3);--kk-muted:light-dark(#6f7b73,#9fafa4);--kk-border:light-dark(#dfe5dd,#37433b);--kk-accent:light-dark(#356750,#a2cbb2);--kk-soft:light-dark(#e8f0e7,#2e4235);--kk-button:light-dark(#356750,#a2cbb2);--kk-button-text:light-dark(#fff,#172c20);--kk-shadow:light-dark(#243c3010,#00000028);--kk-radius:16px;color:var(--kk-text);font-family:Inter,-apple-system,BlinkMacSystemFont,&quot;PingFang SC&quot;,&quot;Microsoft YaHei&quot;,sans-serif;font-size:14px;line-height:1.65;width:100%;position:relative}
+#kk-prototype *{box-sizing:border-box}#kk-prototype button,#kk-prototype input,#kk-prototype select,#kk-prototype textarea{font:inherit;color:inherit}#kk-prototype button{cursor:pointer;border:0;background:transparent;display:inline-flex;align-items:center;gap:7px;text-align:left}#kk-prototype button:hover{color:var(--kk-accent)}#kk-prototype button:disabled{cursor:default;opacity:.7}#kk-prototype button:focus-visible,#kk-prototype select:focus-visible,#kk-prototype textarea:focus-visible,#kk-prototype input:focus-visible{outline:2px solid var(--kk-accent);outline-offset:3px}#kk-prototype button svg,#kk-prototype label svg{width:16px;height:16px;flex-shrink:0}#kk-prototype small{font-size:11px;color:var(--kk-muted)}#kk-prototype [hidden]{display:none!important}#kk-prototype h1,#kk-prototype h2,#kk-prototype h3,#kk-prototype p{margin:0}#kk-prototype h1{font-size:26px;line-height:1.4;font-weight:500;letter-spacing:-.6px}#kk-prototype h2{font-size:18px;line-height:1.5;font-weight:500}#kk-prototype h3{font-size:14px;font-weight:500}#kk-prototype strong{font-weight:500}#kk-prototype .kk-preview{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 14px}#kk-prototype .kk-preview&gt;span{font-size:12px;font-weight:500}#kk-prototype .kk-preview small{margin-left:9px}#kk-prototype .kk-scenes{display:flex;flex-wrap:wrap;gap:4px}#kk-prototype .kk-scenes button{font-size:11px;padding:6px 10px;border-radius:7px}#kk-prototype .kk-scenes button[aria-pressed=true]{background:var(--kk-soft);color:var(--kk-accent)}#kk-prototype .kk-window{display:grid;grid-template-columns:170px minmax(0,1fr);background:var(--kk-bg);border:1px solid var(--kk-border);border-radius:14px;position:relative;min-height:715px;overflow:clip}#kk-prototype .kk-sidebar{background:var(--kk-sidebar);padding:25px 13px 14px;display:flex;flex-direction:column;border-right:1px solid var(--kk-border);gap:13px}#kk-prototype .kk-brand{display:flex;align-items:center;gap:9px;padding:0 3px 16px;font-size:17px;letter-spacing:-.6px;font-weight:500}#kk-prototype .kk-brand small{display:block;font-size:10px;letter-spacing:0;font-weight:400;margin-top:3px}#kk-prototype .kk-logo{width:29px;height:33px;border:1px solid var(--kk-accent);border-radius:9px;display:grid;place-items:center;color:var(--kk-accent)}#kk-prototype .kk-logo svg{width:18px}#kk-prototype .kk-new{border:1px solid var(--kk-border);background:var(--kk-surface);border-radius:8px;padding:9px 10px;width:100%;font-size:12px;box-shadow:0 2px 3px var(--kk-shadow)}#kk-prototype .kk-new span{margin-left:auto}#kk-prototype .kk-eyebrow{font-size:11px;color:var(--kk-muted);display:flex;justify-content:space-between;align-items:center;margin:10px 6px 0}#kk-prototype .kk-session-row{display:flex;align-items:center;border-radius:7px;margin-bottom:5px}#kk-prototype .kk-session-row.current{background:var(--kk-soft)}#kk-prototype .kk-session-row&gt;button:first-child{min-width:0;flex:1;padding:9px 7px;font-size:12px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#kk-prototype .kk-session-row .kk-delete{padding:4px;color:var(--kk-muted)}#kk-prototype .kk-delete svg{width:13px}#kk-prototype .kk-sidebar-bottom{margin-top:auto;padding-top:60px}#kk-prototype .kk-provider-row{width:100%;padding:8px 6px;font-size:12px;gap:8px}#kk-prototype .kk-provider-mark{width:24px;height:24px;border:1px solid var(--kk-border);border-radius:7px;background:var(--kk-surface);display:grid;place-items:center;font-size:12px;color:var(--kk-accent)}#kk-prototype .kk-provider-row small{margin-left:auto;font-size:10px}#kk-prototype .kk-add-provider{font-size:11px;color:var(--kk-muted);margin:4px 0 18px;padding:5px}#kk-prototype .kk-profile{display:flex;gap:9px;align-items:center;border-top:1px solid var(--kk-border);padding:17px 5px 0;font-size:11px}#kk-prototype .kk-profile&gt;span{border-radius:50%;background:var(--kk-border);width:28px;height:28px;display:grid;place-items:center}#kk-prototype .kk-profile small{display:block;font-size:10px}#kk-prototype .kk-workspace{min-width:0;position:relative}#kk-prototype .kk-header{padding:21px 22px 13px;display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:13px}#kk-prototype .kk-title-group{min-width:0;display:flex;align-items:center;gap:6px}#kk-prototype #kk-session-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#kk-prototype .kk-knowledge{font-size:11px;color:var(--kk-accent);white-space:nowrap}#kk-prototype .kk-toolbar{padding:0 22px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;border-bottom:1px solid var(--kk-border)}#kk-prototype .kk-model-label{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--kk-muted)}#kk-prototype .kk-model-label svg{width:12px;height:12px}#kk-prototype .kk-model-label .kk-model-name{color:var(--kk-text)}#kk-prototype .kk-model-picker{border:1px solid var(--kk-border);border-radius:6px;padding:4px 7px;background:var(--kk-surface);font-size:11px}#kk-prototype .kk-capabilities{display:flex;gap:12px;flex-wrap:wrap}#kk-prototype .kk-capabilities label{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--kk-muted)}#kk-prototype .kk-capabilities label:last-child{color:var(--kk-accent)}#kk-prototype select{background:transparent;border:0;max-width:100%;cursor:pointer}#kk-prototype select option{background:var(--kk-surface);color:var(--kk-text)}#kk-prototype .kk-content{display:grid;grid-template-columns:minmax(0,1fr) 167px;min-height:594px}#kk-prototype .kk-main{padding:19px 22px 15px;min-width:0}#kk-prototype .kk-path{display:flex;flex-wrap:wrap;gap:6px;align-items:center;color:var(--kk-muted);font-size:11px;min-height:25px;margin-bottom:15px}#kk-prototype .kk-path button{padding:0;font-size:11px}#kk-prototype .kk-path span:last-child{color:var(--kk-accent)}#kk-prototype .kk-tree-panel{border-left:1px solid var(--kk-border);padding:23px 12px;display:flex;flex-direction:column;min-width:0}#kk-prototype .kk-tree-heading{display:flex;align-items:center;justify-content:space-between;gap:3px;margin-bottom:29px}#kk-prototype .kk-tree-heading&gt;span{display:flex;align-items:center;gap:7px;font-size:11px}#kk-prototype .kk-tree-heading svg{width:14px;height:14px;color:var(--kk-muted)}#kk-prototype .kk-tree-row{position:relative;margin-left:var(--indent);padding-left:19px;margin-bottom:11px}#kk-prototype .kk-tree-row:before{content:&quot;&quot;;position:absolute;left:5px;top:-14px;height:33px;width:12px;border-left:1px solid var(--kk-border);border-bottom:1px solid var(--kk-border);border-radius:0 0 0 8px}#kk-prototype .kk-tree-row:first-child:before{display:none}#kk-prototype .kk-node{position:relative;width:100%;padding:7px 5px 7px 10px;border-radius:6px;display:flex;flex-direction:column;align-items:flex-start;gap:0;font-size:11px}#kk-prototype .kk-node:before{content:&quot;&quot;;position:absolute;left:-17px;top:15px;width:7px;height:7px;background:var(--kk-surface);border:1px solid var(--kk-muted);border-radius:50%;z-index:1}#kk-prototype .kk-node.active{background:var(--kk-soft);color:var(--kk-accent)}#kk-prototype .kk-node.active:before{background:var(--kk-accent);border-color:var(--kk-accent);box-shadow:0 0 0 3px var(--kk-soft)}#kk-prototype .kk-node small{font-size:10px;margin-top:2px}#kk-prototype .kk-tree-footer{display:flex;flex-wrap:wrap;align-items:center;gap:5px;font-size:10px;color:var(--kk-muted);border-top:1px solid var(--kk-border);padding-top:18px;margin-top:25px}#kk-prototype .kk-current-dot,#kk-prototype .kk-status-dot{display:inline-block;width:5px;height:5px;background:var(--kk-accent);border-radius:50%}#kk-prototype .kk-line-key{width:10px;height:1px;background:var(--kk-muted);margin-left:7px}#kk-prototype .kk-tree-note{margin-top:auto;padding-top:40px;color:var(--kk-muted);font-size:11px;line-height:2}#kk-prototype #kk-stack{position:relative;padding-top:0}#kk-prototype .kk-back-card{border:1px solid var(--kk-border);background:var(--kk-surface);border-radius:var(--kk-radius) var(--kk-radius) 0 0;padding:10px 16px 21px;margin-bottom:-13px;display:flex;width:100%;font-size:11px;justify-content:space-between;color:var(--kk-muted)}#kk-prototype .kk-back-card span{display:flex;align-items:center;gap:7px}#kk-prototype .kk-back-card svg{width:13px;height:13px}#kk-prototype .kk-dialog{position:relative;margin-left:var(--inset,0);border:1px solid var(--kk-border);border-radius:var(--kk-radius);background:var(--kk-surface);box-shadow:0 8px 25px var(--kk-shadow);min-height:460px;display:flex;flex-direction:column;transition:margin .3s ease}#kk-prototype .kk-dialog.kk-enter{animation:kk-slide .4s cubic-bezier(.2,.8,.2,1)}#kk-prototype .kk-dialog-top{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--kk-border);padding:11px 18px;font-size:11px;color:var(--kk-muted)}#kk-prototype .kk-dialog-top&gt;span{display:flex;align-items:center;gap:6px}#kk-prototype .kk-dialog-top svg{width:13px;height:13px}#kk-prototype .kk-dialog-top button{font-size:11px;padding:0}#kk-prototype .kk-messages{padding:22px 23px 16px;flex:1;min-width:0}#kk-prototype .kk-user{background:var(--kk-bg);border:1px solid var(--kk-border);border-radius:12px 12px 2px 12px;padding:11px 14px;margin-left:20px;font-size:12px;line-height:1.8;margin-bottom:22px}#kk-prototype .kk-answer-label{display:flex;align-items:center;gap:8px;color:var(--kk-accent);font-size:11px;margin-bottom:13px}#kk-prototype .kk-answer-label&gt;span{border-radius:6px;width:22px;height:22px;display:grid;place-items:center;background:var(--kk-soft)}#kk-prototype .kk-answer-label svg{width:13px;height:13px}#kk-prototype .kk-answer{font-size:12px;line-height:1.95;position:relative;overflow-wrap:anywhere}#kk-prototype .kk-answer h2{margin:0 0 12px}#kk-prototype .kk-answer p{margin:0 0 13px}#kk-prototype .kk-answer ul{padding-left:17px;margin:9px 0 16px}#kk-prototype .kk-answer li{margin:6px 0}#kk-prototype .kk-term{display:inline!important;padding:0 3px!important;color:var(--kk-accent)!important;font-size:inherit!important;border-bottom:1px solid var(--kk-accent)!important;background:var(--kk-soft)!important;border-radius:3px}#kk-prototype .kk-term.selected{box-shadow:0 0 0 2px var(--kk-soft);background:var(--kk-soft)}#kk-prototype .kk-selection-bar{display:flex;align-items:center;gap:8px;justify-content:space-between;background:var(--kk-soft);border:1px solid var(--kk-border);border-radius:9px;padding:8px 9px;margin:15px 0;font-size:11px}#kk-prototype .kk-selection-bar&gt;span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:42%}#kk-prototype .kk-explore{background:var(--kk-button)!important;color:var(--kk-button-text)!important;padding:6px 9px!important;border-radius:6px;white-space:nowrap;font-size:11px!important}#kk-prototype .kk-sources{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--kk-muted);margin-top:17px}#kk-prototype .kk-sources svg{width:12px;height:12px}#kk-prototype .kk-message-tools{display:flex;gap:10px;margin-top:16px;color:var(--kk-muted)}#kk-prototype .kk-message-tools button{font-size:10px;padding:0}#kk-prototype .kk-message-tools svg{width:13px;height:13px}#kk-prototype .kk-composer{border:1px solid var(--kk-border);border-radius:11px;margin:0 13px 13px;padding:10px 11px 9px;background:var(--kk-surface)}#kk-prototype textarea{resize:vertical;display:block;background:transparent;border:0;width:100%;min-height:42px;padding:0;font-size:12px;line-height:1.7}#kk-prototype textarea::placeholder,#kk-prototype input::placeholder{color:var(--kk-muted)}#kk-prototype .kk-compose-bottom{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--kk-muted);font-size:10px}#kk-prototype .kk-send{background:var(--kk-button);color:var(--kk-button-text);border-radius:7px;padding:5px 7px}#kk-prototype .kk-send:hover{color:var(--kk-button-text)}#kk-prototype .kk-send svg{width:15px;height:15px}#kk-prototype .kk-hint{text-align:center;font-size:10px;color:var(--kk-muted);margin:13px 0 0}#kk-prototype .kk-welcome{display:flex;flex-direction:column;justify-content:center;min-height:300px;padding:34px 30px;align-items:flex-start}#kk-prototype .kk-welcome .kk-welcome-symbol{font-size:25px;color:var(--kk-accent);margin-bottom:24px}#kk-prototype .kk-welcome p{font-size:12px;color:var(--kk-muted);margin-top:15px;line-height:1.9}#kk-prototype .kk-suggestions{display:flex;gap:7px;flex-wrap:wrap;margin-top:24px}#kk-prototype .kk-suggestions button{border:1px solid var(--kk-border);border-radius:6px;padding:6px 9px;font-size:11px}#kk-prototype .kk-assistant{position:absolute;top:0;right:0;bottom:0;width:min(355px,100%);background:var(--kk-surface);border-left:1px solid var(--kk-border);box-shadow:-16px 0 35px var(--kk-shadow);z-index:5;padding:21px 19px 16px;display:flex;flex-direction:column;animation:kk-slide .35s ease}#kk-prototype .kk-assistant-header{display:flex;justify-content:space-between;align-items:center;padding-bottom:19px;border-bottom:1px solid var(--kk-border)}#kk-prototype .kk-assistant-header h2{font-size:14px;display:flex;align-items:center;gap:7px}#kk-prototype .kk-assistant-header h2 svg{width:16px;color:var(--kk-accent)}#kk-prototype .kk-assistant-header p{font-size:10px;color:var(--kk-muted);margin-top:5px}#kk-prototype .kk-assistant-scope{background:var(--kk-soft);padding:9px 11px;margin:17px 0 24px;border-radius:7px;font-size:11px;color:var(--kk-accent)}#kk-prototype .kk-assistant-body{flex:1;font-size:12px;line-height:1.9}#kk-prototype .kk-assistant-body .kk-user{margin-left:24px}#kk-prototype .kk-assistant-body p{margin:10px 0}#kk-prototype .kk-citation{display:flex;width:100%;align-items:center;justify-content:space-between;border:1px solid var(--kk-border);padding:9px 11px;border-radius:8px;margin:8px 0;font-size:11px}#kk-prototype .kk-citation span{display:block;color:var(--kk-muted);font-size:10px;margin-top:3px}#kk-prototype .kk-citation svg{width:13px;height:13px}#kk-prototype .kk-assistant .kk-composer{margin:18px 0 0}#kk-prototype .kk-modal{position:absolute;inset:0;background:light-dark(#26372c35,#0008);backdrop-filter:blur(3px);z-index:8;display:flex;align-items:center;justify-content:center;padding:22px}#kk-prototype .kk-settings{background:var(--kk-surface);border:1px solid var(--kk-border);border-radius:16px;width:580px;max-width:100%;box-shadow:0 15px 80px var(--kk-shadow);padding:25px}#kk-prototype .kk-settings-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}#kk-prototype .kk-settings&gt;p{font-size:12px;color:var(--kk-muted);margin-bottom:24px}#kk-prototype .kk-settings-list{display:flex;gap:9px;margin-bottom:22px;flex-wrap:wrap}#kk-prototype .kk-settings-list button{flex:1;min-width:100px;border:1px solid var(--kk-border);border-radius:9px;padding:10px;font-size:12px}#kk-prototype .kk-settings-list button.selected{border-color:var(--kk-accent);background:var(--kk-soft)}#kk-prototype .kk-settings-list small{margin-left:auto}#kk-prototype .kk-field{display:block;margin-bottom:15px;font-size:11px;color:var(--kk-muted)}#kk-prototype .kk-field input,#kk-prototype .kk-field select{display:block;width:100%;background:var(--kk-bg);border:1px solid var(--kk-border);border-radius:7px;padding:8px 10px;margin-top:6px;font-size:12px;color:var(--kk-text)}#kk-prototype .kk-field-row{display:grid;grid-template-columns:1fr 1fr;gap:13px}#kk-prototype .kk-default{display:flex;gap:8px;align-items:center;font-size:12px;margin:5px 0 22px}#kk-prototype input[type=checkbox]{accent-color:var(--kk-accent)}#kk-prototype .kk-settings-actions{display:flex;justify-content:space-between;gap:10px;align-items:center;border-top:1px solid var(--kk-border);padding-top:18px}#kk-prototype .kk-settings-actions button{padding:8px 13px;border-radius:7px;font-size:12px;border:1px solid var(--kk-border)}#kk-prototype .kk-settings-actions .kk-save{background:var(--kk-button);color:var(--kk-button-text);border-color:var(--kk-button)}#kk-prototype .kk-settings-note{font-size:11px;color:var(--kk-muted);min-height:20px;margin-top:12px}#kk-prototype .kk-preview-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;color:var(--kk-muted);font-size:11px;margin-top:12px}#kk-prototype .kk-preview-footer&gt;span{display:flex;align-items:center;gap:6px}#kk-prototype .kk-preview-footer button{font-size:11px}#kk-prototype .kk-live{font-size:11px;color:var(--kk-accent);min-height:20px;margin-top:6px}#kk-prototype .kk-mobile-menu{display:none}#kk-prototype .kk-highlight{animation:kk-highlight 1.4s ease}#kk-prototype .kk-extra-message{margin-top:20px}#kk-prototype .kk-extra-message p{font-size:12px;margin-bottom:20px}
+@keyframes kk-slide{from{transform:translateX(30px) translateY(7px);opacity:.3}to{transform:translateX(0) translateY(0);opacity:1}}@keyframes kk-highlight{0%,40%{box-shadow:0 0 0 4px var(--kk-soft)}100%{box-shadow:none}}
+@media(prefers-reduced-motion:reduce){#kk-prototype *{animation:none!important;transition:none!important}}@media(max-width:850px){#kk-prototype .kk-window{grid-template-columns:145px minmax(0,1fr)}#kk-prototype .kk-sidebar{padding:23px 9px 12px}#kk-prototype .kk-brand{font-size:15px;gap:6px}#kk-prototype .kk-content{grid-template-columns:minmax(0,1fr) 140px}#kk-prototype .kk-main{padding:16px 14px}#kk-prototype .kk-header{padding:18px 14px 12px}#kk-prototype .kk-toolbar{padding:0 14px 14px}#kk-prototype .kk-messages{padding:18px 17px}#kk-prototype .kk-tree-panel{padding:20px 8px}#kk-prototype .kk-tree-row{margin-left:calc(var(--indent) * .6)}}
+@media(max-width:700px){#kk-prototype .kk-window{grid-template-columns:minmax(0,1fr)}#kk-prototype .kk-sidebar{display:none}#kk-prototype .kk-sidebar.kk-visible{display:flex;position:absolute;inset:0 auto 0 0;width:180px;z-index:7;box-shadow:12px 0 28px var(--kk-shadow)}#kk-prototype .kk-mobile-menu{display:inline-flex;padding:0}#kk-prototype .kk-preview&gt;span{width:100%}#kk-prototype .kk-scenes button{padding:5px 7px}#kk-prototype .kk-header{padding:16px 12px 12px}#kk-prototype .kk-toolbar{padding:0 12px 12px}#kk-prototype .kk-knowledge{font-size:10px}}
+@media(max-width:460px){#kk-prototype .kk-content{display:flex;flex-direction:column}#kk-prototype .kk-tree-panel{border-left:0;border-top:1px solid var(--kk-border);padding:13px 16px}#kk-prototype .kk-tree-heading{margin-bottom:10px}#kk-prototype #kk-tree{display:flex;flex-wrap:wrap;gap:6px}#kk-prototype .kk-tree-row{margin:0;padding:0}#kk-prototype .kk-tree-row:before,#kk-prototype .kk-node:before,#kk-prototype .kk-tree-footer,#kk-prototype .kk-tree-note{display:none}#kk-prototype .kk-node{padding:7px;border:1px solid var(--kk-border)}#kk-prototype .kk-main{padding:15px 10px}#kk-prototype .kk-messages{padding:18px 14px}#kk-prototype .kk-dialog{margin-left:0!important}#kk-prototype .kk-header{flex-wrap:wrap}#kk-prototype h1{font-size:24px}#kk-prototype .kk-assistant{position:relative;width:100%;border-left:0;border-top:1px solid var(--kk-border);box-shadow:none;min-height:590px}#kk-prototype .kk-settings{padding:18px}#kk-prototype .kk-modal{padding:10px;align-items:flex-start;padding-top:40px}#kk-prototype .kk-field-row{grid-template-columns:1fr;gap:0}#kk-prototype .kk-preview-footer{font-size:10px}#kk-prototype .kk-model-label{flex-wrap:wrap}#kk-prototype .kk-welcome{padding:28px 20px}#kk-prototype .kk-dialog-top{padding:10px 12px}#kk-prototype .kk-dialog-top&gt;span{max-width:78%;flex-wrap:wrap}}
+#kk-prototype #kk-tree{position:relative}#kk-prototype .kk-tree-lines{position:absolute;inset:0 auto auto 0;pointer-events:none;overflow:visible}#kk-prototype .kk-tree-lines path{stroke:var(--kk-border);stroke-width:1.5;fill:none}#kk-prototype .kk-tree-row{height:58px;margin-bottom:0;margin-left:var(--indent)}#kk-prototype .kk-tree-row:before{display:none}#kk-prototype .kk-node{min-height:47px}@media(max-width:460px){#kk-prototype .kk-tree-lines{display:none}#kk-prototype .kk-tree-row{height:auto;margin:0}}
+#kk-prototype .kk-tree-heading,#kk-prototype .kk-tree-footer,#kk-prototype .kk-tree-note{display:none}
+#kk-prototype .kk-tree-panel{justify-content:center;padding:25px 10px;background:var(--kk-bg)}
+#kk-prototype #kk-tree{position:relative;display:block;width:100%;margin:auto 0;min-height:320px;isolation:isolate}
+#kk-prototype .kk-branch-lines{position:absolute;inset:0;pointer-events:none;overflow:visible}
+#kk-prototype .kk-branch-lines path{fill:none;stroke:var(--kk-muted);stroke-opacity:.42;stroke-width:1.6;stroke-linecap:round}
+#kk-prototype .kk-branch-lines path.on-path{stroke:var(--kk-accent);stroke-opacity:.8;stroke-width:2.6}
+#kk-prototype .kk-graph-node{position:absolute;width:44px;height:44px;transform:translate(-50%,-50%);padding:0;display:grid;place-items:center;border-radius:50%;background:transparent;z-index:1}
+#kk-prototype .kk-graph-node .kk-graph-dot{display:block;width:25px;height:25px;border:1.8px solid var(--kk-muted);border-radius:50%;background:var(--kk-bg);transition:box-shadow .18s ease,border-color .18s ease,transform .18s ease}
+#kk-prototype .kk-graph-node.on-path .kk-graph-dot{border:2.6px solid var(--kk-accent);box-shadow:0 0 10px color-mix(in srgb,var(--kk-accent) 13%,transparent)}
+#kk-prototype .kk-graph-node.is-root .kk-graph-dot{width:31px;height:31px}
+#kk-prototype .kk-graph-node.active .kk-graph-dot{background:var(--kk-accent);border-color:var(--kk-accent);box-shadow:0 0 0 5px var(--kk-soft),0 0 18px color-mix(in srgb,var(--kk-accent) 28%,transparent)}
+#kk-prototype .kk-graph-node:hover .kk-graph-dot,#kk-prototype .kk-graph-node:focus-visible .kk-graph-dot{border-color:var(--kk-accent);transform:scale(1.13)}
+@media(max-width:460px){#kk-prototype .kk-tree-panel{padding:25px 20px}#kk-prototype #kk-tree{display:block;max-width:300px;margin:0 auto}}
+#kk-prototype .kk-main{padding-bottom:24px}
+#kk-prototype #kk-stack{position:relative;isolation:isolate}
+#kk-prototype .kk-pile-stage{position:relative;width:100%;min-height:480px}
+#kk-prototype .kk-pile-plane{position:absolute;transform-origin:0 0;isolation:isolate}
+#kk-prototype .kk-pile-plane&gt;.kk-dialog{margin:0!important;width:100%;transform-origin:center center;transform:rotate(var(--kk-rotation));border-radius:var(--kk-radius);box-shadow:0 10px 32px var(--kk-shadow),0 2px 6px var(--kk-shadow);transition:filter .35s ease,opacity .35s ease}
+#kk-prototype .kk-pile-plane&gt;.kk-ghost{position:absolute;inset:0;overflow:hidden;pointer-events:none;user-select:none;filter:blur(var(--kk-layer-blur));opacity:var(--kk-layer-opacity);background:color-mix(in srgb,var(--kk-surface) 94%,var(--kk-border))}
+#kk-prototype .kk-ghost .kk-messages{opacity:.62}
+#kk-prototype .kk-ghost .kk-composer{height:84px;opacity:.65;margin-top:auto}
+#kk-prototype .kk-pile-plane&gt;.kk-foreground{position:relative;filter:none;opacity:1;box-shadow:0 20px 45px var(--kk-shadow),0 3px 10px var(--kk-shadow)}
+#kk-prototype .kk-pile-plane&gt;.kk-foreground.kk-enter{animation:kk-deal .5s cubic-bezier(.22,.8,.24,1)}
+#kk-prototype .kk-ghost-draft{height:8px;width:58%;border-radius:8px;background:var(--kk-border);margin:10px 0}
+#kk-prototype .kk-ghost-draft:last-child{width:32%}
+@keyframes kk-deal{from{transform:translate(24px,-24px) rotate(0deg);opacity:.5}to{transform:translate(0,0) rotate(0deg);opacity:1}}
+@media(max-width:700px){#kk-prototype .kk-sidebar{display:none}#kk-prototype .kk-window{grid-template-columns:minmax(0,1fr)}}
+#kk-prototype #kk-selection{position:absolute;z-index:20}
+#kk-prototype .kk-selection-actions{display:flex;align-items:center;gap:3px;padding:4px;background:var(--kk-surface);border:1px solid var(--kk-border);border-radius:10px;box-shadow:0 5px 18px var(--kk-shadow),0 2px 5px var(--kk-shadow)}
+#kk-prototype .kk-selection-actions button{width:38px;height:36px;display:grid;place-items:center;padding:0;border-radius:6px;color:var(--kk-accent)}
+#kk-prototype .kk-selection-actions button:hover,#kk-prototype .kk-selection-actions button:focus-visible{background:var(--kk-soft)}
+#kk-prototype .kk-selection-actions .kk-action-divider{height:19px;width:1px;background:var(--kk-border)}
+#kk-prototype .kk-draft-quote{display:flex;align-items:flex-start;gap:8px;padding:9px 10px;margin-bottom:10px;border-left:2px solid var(--kk-accent);border-radius:3px 7px 7px 3px;background:var(--kk-soft);font-size:12px;color:var(--kk-text)}
+#kk-prototype .kk-draft-quote&gt;svg{width:14px;height:14px;flex-shrink:0;margin-top:3px;color:var(--kk-accent)}
+#kk-prototype .kk-draft-quote&gt;div{flex:1;min-width:0;overflow-wrap:anywhere}
+#kk-prototype .kk-draft-quote small{display:block;font-size:10px;margin-bottom:3px;color:var(--kk-muted)}
+#kk-prototype .kk-draft-quote button{padding:2px;color:var(--kk-muted)}
+#kk-prototype .kk-sent-quote{border-left:2px solid var(--kk-border);padding:4px 9px;margin-bottom:9px;font-size:11px;color:var(--kk-muted);overflow-wrap:anywhere}
+#kk-prototype .kk-answer ::selection{background:var(--kk-soft);color:var(--kk-text)}
+@media(pointer:coarse){#kk-prototype .kk-selection-actions button{width:44px;height:44px}}
+&lt;/style&gt;
+&lt;script&gt;
+(()=&gt;{
+const root=document.getElementById(&#x27;kk-prototype&#x27;);
+const $=s=&gt;root.querySelector(s);
+const esc=s=&gt;String(s).replace(/[&amp;&lt;&gt;&quot;&#x27;]/g,c=&gt;({&#x27;&amp;&#x27;:&#x27;&amp;amp;&#x27;,&#x27;&lt;&#x27;:&#x27;&amp;lt;&#x27;,&#x27;&gt;&#x27;:&#x27;&amp;gt;&#x27;,&#x27;&quot;&#x27;:&#x27;&amp;quot;&#x27;,&quot;&#x27;&quot;:&#x27;&amp;#39;&#x27;}[c]));
+const icon=name=&gt;&#x27;&lt;i data-lucide=&quot;&#x27;+name+&#x27;&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;&#x27;;
+const providers=[{name:&#x27;DeepSeek&#x27;,model:&#x27;DeepSeek · 推理模型&#x27;,address:&#x27;https://api.deepseek.com&#x27;,mark:&#x27;D&#x27;},{name:&#x27;OpenAI&#x27;,model:&#x27;OpenAI · 推理模型&#x27;,address:&#x27;https://api.openai.com/v1&#x27;,mark:&#x27;O&#x27;}];
+let defaultProvider=0,editProvider=0,seq=10,currentScene=&#x27;explore&#x27;,selectedTerm=&#x27;阿基拉&#x27;,playing=false,timers=[];
+const design={stack:10,radius:16,accent:&#x27;forest&#x27;,rotation:4.5,blur:1.2};
+function nodes(){return [{id:&#x27;main&#x27;,parent:null,title:&#x27;日本电影与叙事&#x27;,question:&#x27;日本 90 年代影视作品有哪些典型的表达方式和叙事模式？&#x27;,kind:&#x27;main&#x27;,extra:[],draft:&#x27;&#x27;},{id:&#x27;akira&#x27;,parent:&#x27;main&#x27;,title:&#x27;阿基拉&#x27;,question:&#x27;《阿基拉》是什么？它和我们刚才聊的日本电影有什么关系？&#x27;,kind:&#x27;akira&#x27;,extra:[],draft:&#x27;&#x27;},{id:&#x27;cyber&#x27;,parent:&#x27;akira&#x27;,title:&#x27;赛博朋克&#x27;,question:&#x27;什么是赛博朋克？&#x27;,kind:&#x27;cyber&#x27;,extra:[],draft:&#x27;&#x27;},{id:&#x27;daily&#x27;,parent:&#x27;main&#x27;,title:&#x27;日常叙事&#x27;,question:&#x27;什么是日常叙事？&#x27;,kind:&#x27;daily&#x27;,extra:[],draft:&#x27;&#x27;}];}
+const sessions=[{id:&#x27;demo&#x27;,title:&#x27;日本电影与叙事&#x27;,provider:0,locked:true,nodes:nodes().slice(0,1),active:&#x27;main&#x27;,web:&#x27;auto&#x27;,think:&#x27;deep&#x27;,assistant:[],assistantDraft:&#x27;&#x27;}];let session=sessions[0],assistantOpen=false;
+const node=()=&gt;session.nodes.find(n=&gt;n.id===session.active)||session.nodes[0];
+function path(n){const a=[];while(n){a.unshift(n);n=session.nodes.find(x=&gt;x.id===n.parent)}return a}
+function announce(t){$(&#x27;#kk-live&#x27;).textContent=t}
+function icons(){if(globalThis.lucide)globalThis.lucide.createIcons({attrs:{width:16,height:16}})}
+function term(t,id){return &#x27;&lt;button class=&quot;kk-term&quot; data-term=&quot;&#x27;+esc(t)+&#x27;&quot; data-target=&quot;&#x27;+id+&#x27;&quot;&gt;&#x27;+esc(t)+&#x27;&lt;/button&gt;&#x27;}
+function answer(n){
+if(n.kind===&#x27;main&#x27;)return &#x27;&lt;p&gt;可以从两条线索理解：一条把镜头交给日常生活，另一条借动画与幻想，讨论现代社会的焦虑。&lt;/p&gt;&lt;h3&gt;01 · 动画电影：让现实问题进入想象&lt;/h3&gt;&lt;p&gt;谈到这一时期的影响来源，可以先回看 1988 年的&#x27;+term(&#x27;《阿基拉》&#x27;,&#x27;akira&#x27;)+&#x27;。它以未来都市为舞台，触及技术、权力与个体失控，也为理解后来的日本动画提供了一个入口。&lt;/p&gt;&lt;h3&gt;02 · 日常叙事：让情绪停留在细节里&lt;/h3&gt;&lt;p&gt;另一条值得探索的路径是&#x27;+term(&#x27;日常叙事&#x27;,&#x27;daily&#x27;)+&#x27;：从关系、停顿和生活片段中理解人物，而不只依赖强烈的剧情转折。&lt;/p&gt;&#x27;;
+if(n.kind===&#x27;akira&#x27;)return &#x27;&lt;h2&gt;先从新东京开始。&lt;/h2&gt;&lt;p&gt;《阿基拉》（AKIRA）是一部由大友克洋执导、于 1988 年上映的日本动画电影，改编自他的同名漫画。&lt;/p&gt;&lt;p&gt;故事发生在未来的“新东京”。少年铁雄获得难以控制的力量，他与朋友金田的关系，也被卷入城市和权力的冲突。&lt;/p&gt;&lt;p&gt;它常被放在&#x27;+term(&#x27;赛博朋克&#x27;,&#x27;cyber&#x27;)+&#x27;的语境下讨论：技术高度发展，城市中的个体却仍然脆弱。&lt;/p&gt;&lt;p&gt;回到主线：它早于 90 年代上映，但可以作为理解这一时期动画表达的重要前史。&lt;/p&gt;&#x27;;
+if(n.kind===&#x27;cyber&#x27;)return &#x27;&lt;h2&gt;高科技之下，&lt;br&gt;人的处境并没有更轻松。&lt;/h2&gt;&lt;p&gt;&#x27;+term(&#x27;赛博朋克&#x27;,&#x27;cyber&#x27;)+&#x27;是一类科幻表达。它常把先进技术与失序的社会生活放在一起，追问技术、权力和人的关系。&lt;/p&gt;&lt;ul&gt;&lt;li&gt;&lt;strong&gt;技术：&lt;/strong&gt;身体改造、网络与强大的系统。&lt;/li&gt;&lt;li&gt;&lt;strong&gt;城市：&lt;/strong&gt;拥挤的街道、巨大的组织与边缘人群。&lt;/li&gt;&lt;li&gt;&lt;strong&gt;问题：&lt;/strong&gt;谁控制技术？个体还有多少选择？&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;带着这个视角回看《阿基拉》，就能继续讨论铁雄的身体变化与权力失控。&lt;/p&gt;&#x27;;
+if(n.kind===&#x27;daily&#x27;)return &#x27;&lt;h2&gt;故事，也可以从细小的变化开始。&lt;/h2&gt;&lt;p&gt;日常叙事把注意力放在普通生活里的关系与情绪：一顿饭、一次沉默，或一段没有说完的话。&lt;/p&gt;&lt;p&gt;你可以继续从人物关系、镜头停留与情绪积累三个方向展开探索。&lt;/p&gt;&#x27;;
+return &#x27;&lt;h2&gt;&#x27;+esc(n.title)+&#x27;&lt;/h2&gt;&lt;p&gt;这里将根据你选中的内容和分叉前的上下文，展开新的解释。&lt;/p&gt;&lt;p&gt;这张卡片拥有自己的对话记录。你可以继续追问，也可以返回父卡片延续原来的讨论。&lt;/p&gt;&#x27;;
+}
+function composer(assistant=false){return &#x27;&lt;form class=&quot;kk-composer&quot; data-form=&quot;&#x27;+(assistant?&#x27;assistant&#x27;:&#x27;chat&#x27;)+&#x27;&quot;&gt;&#x27;+(assistant?&#x27;&#x27;:quotedDraft())+&#x27;&lt;textarea aria-label=&quot;&#x27;+(assistant?&#x27;询问会话知识助手&#x27;:&#x27;输入消息&#x27;)+&#x27;&quot; placeholder=&quot;&#x27;+(assistant?&#x27;问问这段探索里已经知道的事…&#x27;:session.locked?&#x27;沿着这条思路继续聊…&#x27;:&#x27;从一个让你好奇的问题开始…&#x27;)+&#x27;&quot; rows=&quot;2&quot;&gt;&#x27;+esc(assistant?session.assistantDraft:node().draft||&#x27;&#x27;)+&#x27;&lt;/textarea&gt;&lt;div class=&quot;kk-compose-bottom&quot;&gt;&lt;span&gt;&#x27;+(assistant?&#x27;仅检索本会话 · 可连续追问&#x27;:session.locked?&#x27;Enter 发送 · Shift + Enter 换行&#x27;:&#x27;首次发送后，Provider 与模型将锁定&#x27;)+&#x27;&lt;/span&gt;&lt;button class=&quot;kk-send&quot; type=&quot;button&quot; data-action=&quot;send&quot; aria-label=&quot;发送消息&quot;&gt;&#x27;+icon(&#x27;arrow-up&#x27;)+&#x27;&lt;/button&gt;&lt;/div&gt;&lt;/form&gt;&#x27;}
+function renderSide(){
+$(&#x27;#kk-sessions&#x27;).innerHTML=sessions.map(s=&gt;&#x27;&lt;div class=&quot;kk-session-row &#x27;+(s.id===session.id?&#x27;current&#x27;:&#x27;&#x27;)+&#x27;&quot;&gt;&lt;button data-session=&quot;&#x27;+s.id+&#x27;&quot;&gt;&#x27;+esc(s.title)+&#x27;&lt;/button&gt;&lt;button class=&quot;kk-delete&quot; data-delete=&quot;&#x27;+s.id+&#x27;&quot; aria-label=&quot;删除会话 &#x27;+esc(s.title)+&#x27;&quot;&gt;&#x27;+icon(&#x27;trash-2&#x27;)+&#x27;&lt;/button&gt;&lt;/div&gt;&#x27;).join(&#x27;&#x27;);
+$(&#x27;#kk-provider-list&#x27;).innerHTML=providers.map((p,i)=&gt;&#x27;&lt;button class=&quot;kk-provider-row&quot; data-provider=&quot;&#x27;+i+&#x27;&quot;&gt;&lt;span class=&quot;kk-provider-mark&quot;&gt;&#x27;+p.mark+&#x27;&lt;/span&gt;&#x27;+esc(p.name)+(i===defaultProvider?&#x27;&lt;small&gt;默认&lt;/small&gt;&#x27;:&#x27;&#x27;)+&#x27;&lt;/button&gt;&#x27;).join(&#x27;&#x27;);
+}
+function render(animate=false){
+renderSide();$(&#x27;#kk-session-title&#x27;).textContent=session.title;
+$(&#x27;#kk-model-control&#x27;).innerHTML=session.locked?&#x27;&lt;div class=&quot;kk-model-label&quot; aria-label=&quot;会话开始后不可切换模型&quot;&gt;&#x27;+icon(&#x27;lock-keyhole&#x27;)+&#x27;&lt;span class=&quot;kk-model-name&quot;&gt;&#x27;+esc(providers[session.provider].model)+&#x27;&lt;/span&gt;&lt;span&gt;已锁定&lt;/span&gt;&lt;/div&gt;&#x27;:&#x27;&lt;select class=&quot;kk-model-picker&quot; aria-label=&quot;会话 Provider 和模型&quot;&gt;&#x27;+providers.map((p,i)=&gt;&#x27;&lt;option value=&quot;&#x27;+i+&#x27;&quot; &#x27;+(i===session.provider?&#x27;selected&#x27;:&#x27;&#x27;)+&#x27;&gt;&#x27;+esc(p.model)+&#x27;&lt;/option&gt;&#x27;).join(&#x27;&#x27;)+&#x27;&lt;/select&gt;&#x27;;
+$(&#x27;#kk-web&#x27;).value=session.web;$(&#x27;#kk-think&#x27;).value=session.think;
+const n=node(),trail=path(n);
+$(&#x27;#kk-path&#x27;).innerHTML=trail.map((p,i)=&gt;i===trail.length-1?&#x27;&lt;span&gt;&#x27;+esc(p.title)+&#x27;&lt;/span&gt;&#x27;:&#x27;&lt;button data-node=&quot;&#x27;+p.id+&#x27;&quot;&gt;&#x27;+esc(p.title)+&#x27;&lt;/button&gt;&lt;span&gt;›&lt;/span&gt;&#x27;).join(&#x27;&#x27;);
+$(&#x27;#kk-stack&#x27;).innerHTML=trail.slice(-3,-1).map((p,i)=&gt;&#x27;&lt;button class=&quot;kk-back-card&quot; data-node=&quot;&#x27;+p.id+&#x27;&quot; style=&quot;margin-left:&#x27;+i*design.stack+&#x27;px;width:calc(100% - &#x27;+i*design.stack+&#x27;px)&quot;&gt;&lt;span&gt;&#x27;+icon(&#x27;corner-up-left&#x27;)+esc(p.title)+&#x27;&lt;/span&gt;&lt;small&gt;返回这张卡片&lt;/small&gt;&lt;/button&gt;&#x27;).join(&#x27;&#x27;)+&#x27;&lt;article class=&quot;kk-dialog &#x27;+(animate?&#x27;kk-enter&#x27;:&#x27;&#x27;)+&#x27;&quot; style=&quot;--inset:&#x27;+Math.min(trail.length-1,2)*design.stack+&#x27;px&quot;&gt;&lt;div class=&quot;kk-dialog-top&quot;&gt;&lt;span&gt;&#x27;+icon(n.parent?&#x27;git-branch&#x27;:&#x27;message-circle&#x27;)+(n.parent?&#x27;探索 · &#x27;+esc(n.title):&#x27;主会话&#x27;)+&#x27;&lt;/span&gt;&#x27;+(n.parent?&#x27;&lt;button data-node=&quot;&#x27;+n.parent+&#x27;&quot;&gt;&#x27;+icon(&#x27;arrow-up-left&#x27;)+&#x27; 返回&lt;/button&gt;&#x27;:&#x27;&lt;small&gt;每个问题，都可以长出分支&lt;/small&gt;&#x27;)+&#x27;&lt;/div&gt;&#x27;+(session.locked?&#x27;&lt;div class=&quot;kk-messages&quot;&gt;&lt;div class=&quot;kk-user&quot;&gt;&#x27;+esc(n.question)+&#x27;&lt;/div&gt;&lt;div class=&quot;kk-answer-label&quot;&gt;&lt;span&gt;&#x27;+icon(&#x27;sparkles&#x27;)+&#x27;&lt;/span&gt;&#x27;+esc(providers[session.provider].name)+&#x27;&lt;small&gt;示例回答&lt;/small&gt;&lt;/div&gt;&lt;div class=&quot;kk-answer&quot; data-answer=&quot;true&quot;&gt;&#x27;+answer(n)+&#x27;&lt;/div&gt;&lt;div id=&quot;kk-selection&quot;&gt;&lt;/div&gt;&lt;div class=&quot;kk-message-tools&quot;&gt;&lt;button data-action=&quot;copy&quot;&gt;&#x27;+icon(&#x27;copy&#x27;)+&#x27; 复制&lt;/button&gt;&lt;button data-action=&quot;select&quot;&gt;&#x27;+icon(&#x27;git-branch&#x27;)+&#x27; 探索知识&lt;/button&gt;&lt;/div&gt;&#x27;+n.extra.map(m=&gt;&#x27;&lt;div class=&quot;kk-extra-message&quot;&gt;&lt;div class=&quot;kk-user&quot;&gt;&#x27;+(m.quote?&#x27;&lt;div class=&quot;kk-sent-quote&quot;&gt;&#x27;+esc(m.quote.text)+&#x27;&lt;/div&gt;&#x27;:&#x27;&#x27;)+esc(typeof m===&#x27;string&#x27;?m:m.text)+&#x27;&lt;/div&gt;&lt;p&gt;这是一条演示回复。正式接入模型后，回答会依据当前分支的上下文生成。&lt;/p&gt;&lt;/div&gt;&#x27;).join(&#x27;&#x27;)+&#x27;&lt;/div&gt;&#x27;:&#x27;&lt;div class=&quot;kk-welcome&quot;&gt;&lt;span class=&quot;kk-welcome-symbol&quot;&gt;✳&lt;/span&gt;&lt;h1&gt;从一个问题出发，&lt;br&gt;看看知识会长向哪里。&lt;/h1&gt;&lt;p&gt;自由聊天，选中不懂的概念，&lt;br&gt;沿着新的分支继续探索。&lt;/p&gt;&lt;div class=&quot;kk-suggestions&quot;&gt;&lt;button data-suggest=&quot;日本 90 年代影视作品有哪些典型的叙事模式？&quot;&gt;日本电影与叙事&lt;/button&gt;&lt;button data-suggest=&quot;大模型如何理解我们说的话？&quot;&gt;大模型如何理解语言&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;&#x27;)+composer()+&#x27;&lt;/article&gt;&#x27;;
+makePile(trail);
+drawTree();
+$(&#x27;#kk-hint&#x27;).textContent=session.locked?&#x27;选中文字来探索；点击右侧节点，回到任何一条思路。&#x27;:&#x27;默认 Provider 可在左侧管理；发送第一条消息前可以切换。&#x27;;
+root.querySelectorAll(&#x27;[data-scene]&#x27;).forEach(b=&gt;b.setAttribute(&#x27;aria-pressed&#x27;,String(b.dataset.scene===currentScene)));
+if(selectedTerm&amp;&amp;session.locked&amp;&amp;currentScene===&#x27;explore&#x27;&amp;&amp;n.id===&#x27;main&#x27;)showSelection(selectedTerm);
+renderAssistant();icons();
+}
+let pileObserver;
+function makePile(trail){
+  if(pileObserver)pileObserver.disconnect();
+  const container=$(&#x27;#kk-stack&#x27;);
+  const current=container.querySelector(&#x27;.kk-dialog&#x27;);
+  current.classList.add(&#x27;kk-foreground&#x27;);
+  current.style.setProperty(&#x27;--kk-rotation&#x27;,&#x27;0deg&#x27;);
+  current.style.zIndex=String(trail.length);
+  const stage=document.createElement(&#x27;div&#x27;);stage.className=&#x27;kk-pile-stage&#x27;;
+  const plane=document.createElement(&#x27;div&#x27;);plane.className=&#x27;kk-pile-plane&#x27;;
+  trail.slice(0,-1).forEach((n,i)=&gt;{
+    const distance=trail.length-1-i,ghost=document.createElement(&#x27;article&#x27;);
+    ghost.className=&#x27;kk-dialog kk-ghost&#x27;;ghost.setAttribute(&#x27;aria-hidden&#x27;,&#x27;true&#x27;);ghost.setAttribute(&#x27;inert&#x27;,&#x27;&#x27;);
+    ghost.style.setProperty(&#x27;--kk-rotation&#x27;,-distance*design.rotation+&#x27;deg&#x27;);
+    ghost.style.setProperty(&#x27;--kk-layer-blur&#x27;,Math.min(distance*design.blur,5)+&#x27;px&#x27;);
+    ghost.style.setProperty(&#x27;--kk-layer-opacity&#x27;,Math.max(.48,1-distance*.13));
+    ghost.style.zIndex=String(i);
+    ghost.innerHTML=&#x27;&lt;div class=&quot;kk-dialog-top&quot;&gt;&lt;span&gt;&#x27;+icon(n.parent?&#x27;git-branch&#x27;:&#x27;message-circle&#x27;)+esc(n.title)+&#x27;&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;kk-messages&quot;&gt;&lt;div class=&quot;kk-user&quot;&gt;&#x27;+esc(n.question)+&#x27;&lt;/div&gt;&lt;div class=&quot;kk-answer-label&quot;&gt;&lt;span&gt;&#x27;+icon(&#x27;sparkles&#x27;)+&#x27;&lt;/span&gt;&#x27;+esc(providers[session.provider].name)+&#x27;&lt;/div&gt;&lt;div class=&quot;kk-answer&quot;&gt;&#x27;+answer(n)+&#x27;&lt;/div&gt;&lt;/div&gt;&lt;div class=&quot;kk-composer&quot;&gt;&lt;div class=&quot;kk-ghost-draft&quot;&gt;&lt;/div&gt;&lt;div class=&quot;kk-ghost-draft&quot;&gt;&lt;/div&gt;&lt;/div&gt;&#x27;;
+    plane.appendChild(ghost);
+  });
+  plane.appendChild(current);stage.appendChild(plane);container.replaceChildren(stage);
+  function fitPile(){
+    const available=container.clientWidth;
+    if(!available)return;
+    const cardWidth=Math.max(260,available-(trail.length&gt;1?48:0));
+    if(plane.style.width!==cardWidth+&#x27;px&#x27;)plane.style.width=cardWidth+&#x27;px&#x27;;
+    const h=current.offsetHeight,cx=cardWidth/2,cy=h/2;
+    let minX=0,maxX=cardWidth,minY=0,maxY=h;
+    trail.forEach((n,i)=&gt;{
+      const a=-(trail.length-1-i)*design.rotation*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
+      [[0,0],[cardWidth,0],[cardWidth,h],[0,h]].forEach(([x,y])=&gt;{
+        const rx=cx+(x-cx)*c-(y-cy)*s,ry=cy+(x-cx)*s+(y-cy)*c;
+        minX=Math.min(minX,rx);maxX=Math.max(maxX,rx);minY=Math.min(minY,ry);maxY=Math.max(maxY,ry);
+      });
+    });
+    const scale=Math.min(1,(available-(trail.length&gt;1?24:0))/(maxX-minX));
+    const padding=trail.length&gt;1?26:4;
+    plane.style.transform=&#x27;scale(&#x27;+scale+&#x27;)&#x27;;
+    plane.style.left=((available-(maxX-minX)*scale)/2-minX*scale)+&#x27;px&#x27;;
+    plane.style.top=(padding-minY*scale)+&#x27;px&#x27;;
+    stage.style.height=((maxY-minY)*scale+padding*2)+&#x27;px&#x27;;
+    if(selectedTerm&amp;&amp;$(&#x27;#kk-selection&#x27;)?.children.length)requestAnimationFrame(()=&gt;{if(selectedTerm)showSelection(selectedTerm)});
+  }
+  fitPile();
+  pileObserver=new ResizeObserver(fitPile);pileObserver.observe(container);pileObserver.observe(current);
+}
+function drawTree(){
+  const container=$(&#x27;#kk-tree&#x27;),width=container.clientWidth||145;
+  const children=new Map(session.nodes.map(n=&gt;[n.id,session.nodes.filter(c=&gt;c.parent===n.id)]));
+  const layout=new Map();let leafCount=0,maxDepth=0;
+  function place(n,depth){
+    maxDepth=Math.max(maxDepth,depth);
+    const kids=children.get(n.id)||[];
+    const lane=kids.length?kids.map(c=&gt;place(c,depth+1)).reduce((a,b)=&gt;a+b,0)/kids.length:leafCount++;
+    layout.set(n.id,{lane,depth});return lane;
+  }
+  session.nodes.filter(n=&gt;!n.parent).forEach(n=&gt;place(n,0));
+  const height=Math.max(320,maxDepth*116+88),usable=Math.max(0,width-48),activePath=new Set(path(node()).map(n=&gt;n.id));
+  layout.forEach(p=&gt;{p.x=leafCount&gt;1?24+p.lane*usable/(leafCount-1):width/2;p.y=maxDepth?height-44-p.depth*(height-88)/maxDepth:height/2});
+  container.style.height=height+&#x27;px&#x27;;
+  const edges=session.nodes.filter(n=&gt;n.parent).map(n=&gt;{
+    const a=layout.get(n.parent),b=layout.get(n.id),middle=(a.y+b.y)/2;
+    return &#x27;&lt;path class=&quot;&#x27;+(activePath.has(n.id)?&#x27;on-path&#x27;:&#x27;&#x27;)+&#x27;&quot; d=&quot;M &#x27;+a.x+&#x27; &#x27;+a.y+&#x27; C &#x27;+a.x+&#x27; &#x27;+middle+&#x27;, &#x27;+b.x+&#x27; &#x27;+middle+&#x27;, &#x27;+b.x+&#x27; &#x27;+b.y+&#x27;&quot;/&gt;&#x27;;
+  }).join(&#x27;&#x27;);
+  container.innerHTML=&#x27;&lt;svg class=&quot;kk-branch-lines&quot; width=&quot;&#x27;+width+&#x27;&quot; height=&quot;&#x27;+height+&#x27;&quot; aria-hidden=&quot;true&quot;&gt;&#x27;+edges+&#x27;&lt;/svg&gt;&#x27;+session.nodes.map(n=&gt;{
+    const p=layout.get(n.id),active=n.id===session.active;
+    const label=n.title+(active?&#x27; · 当前卡片&#x27;:!n.parent?&#x27; · 主会话&#x27;:&#x27; · 知识分支&#x27;);
+    return &#x27;&lt;button type=&quot;button&quot; class=&quot;kk-graph-node &#x27;+(active?&#x27;active &#x27;:&#x27;&#x27;)+(activePath.has(n.id)?&#x27;on-path &#x27;:&#x27;&#x27;)+(!n.parent?&#x27;is-root&#x27;:&#x27;&#x27;)+&#x27;&quot; style=&quot;left:&#x27;+p.x+&#x27;px;top:&#x27;+p.y+&#x27;px&quot; data-node=&quot;&#x27;+n.id+&#x27;&quot; aria-label=&quot;&#x27;+esc(label)+&#x27;&quot; &#x27;+(active?&#x27;aria-current=&quot;true&quot;&#x27;:&#x27;&#x27;)+&#x27; data-tooltip=&quot;&#x27;+esc(label)+&#x27;&quot; data-tooltip-placement=&quot;left&quot;&gt;&lt;span class=&quot;kk-graph-dot&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;/button&gt;&#x27;;
+  }).join(&#x27;&#x27;);
+}
+function showSelection(t,selectionRect){
+  selectedTerm=t;
+  const el=$(&#x27;#kk-selection&#x27;),card=$(&#x27;.kk-foreground&#x27;),answerEl=card?.querySelector(&#x27;[data-answer]&#x27;);
+  if(!el||!card||!answerEl)return;
+  if(el.parentElement!==card)card.appendChild(el);
+  el.innerHTML=&#x27;&lt;div class=&quot;kk-selection-actions&quot; role=&quot;group&quot; aria-label=&quot;选中文字操作&quot;&gt;&lt;button type=&quot;button&quot; data-action=&quot;quote&quot; aria-label=&quot;引用到当前卡片&quot; data-tooltip=&quot;引用到当前卡片&quot;&gt;&#x27;+icon(&#x27;quote&#x27;)+&#x27;&lt;/button&gt;&lt;span class=&quot;kk-action-divider&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;&lt;button type=&quot;button&quot; data-action=&quot;explore&quot; aria-label=&quot;探索新分支&quot; data-tooltip=&quot;探索新分支&quot;&gt;&#x27;+icon(&#x27;git-branch&#x27;)+&#x27;&lt;/button&gt;&lt;/div&gt;&#x27;;
+  if(!selectionRect){
+    const walker=document.createTreeWalker(answerEl,NodeFilter.SHOW_TEXT);let textNode;
+    while(textNode=walker.nextNode()){const index=textNode.textContent.indexOf(t);if(index&gt;=0){const range=document.createRange();range.setStart(textNode,index);range.setEnd(textNode,index+t.length);selectionRect=range.getBoundingClientRect();break}}
+  }
+  const box=card.getBoundingClientRect(),scale=box.width/card.offsetWidth;
+  const anchor=selectionRect||answerEl.getBoundingClientRect();
+  const localX=(anchor.left-box.left)/scale,localY=(anchor.top-box.top)/scale;
+  el.style.left=Math.max(9,Math.min(localX,card.offsetWidth-el.offsetWidth-9))+&#x27;px&#x27;;
+  el.style.top=(localY&gt;90?localY-el.offsetHeight-7:(anchor.bottom-box.top)/scale+7)+&#x27;px&#x27;;
+  icons();
+}
+function hideSelection(){selectedTerm=&#x27;&#x27;;const el=$(&#x27;#kk-selection&#x27;);if(el)el.replaceChildren();window.getSelection()?.removeAllRanges()}
+function quoteSelection(){
+  if(!selectedTerm)return;
+  node().quote={text:selectedTerm,sourceCardId:node().id};
+  hideSelection();render();
+  $(&#x27;.kk-foreground textarea&#x27;)?.focus();
+  announce(&#x27;已引用到当前卡片。输入问题后发送即可；不会创建分支。&#x27;);
+}
+function quotedDraft(){const q=node().quote;return q?&#x27;&lt;div class=&quot;kk-draft-quote&quot;&gt;&#x27;+icon(&#x27;quote&#x27;)+&#x27;&lt;div&gt;&lt;small&gt;引用当前卡片&lt;/small&gt;&#x27;+esc(q.text)+&#x27;&lt;/div&gt;&lt;button type=&quot;button&quot; data-action=&quot;remove-quote&quot; aria-label=&quot;移除引用&quot;&gt;&#x27;+icon(&#x27;x&#x27;)+&#x27;&lt;/button&gt;&lt;/div&gt;&#x27;:&#x27;&#x27;}
+function captureSelection(){
+  const selection=window.getSelection();if(!selection||selection.isCollapsed||!selection.rangeCount)return;
+  const range=selection.getRangeAt(0),answerEl=$(&#x27;.kk-foreground [data-answer]&#x27;);
+  if(!answerEl||!answerEl.contains(range.startContainer)||!answerEl.contains(range.endContainer))return;
+  const text=selection.toString().trim();if(text)showSelection(text,range.getBoundingClientRect());
+}
+function go(id){session.active=id;selectedTerm=&#x27;&#x27;;render(true);announce(&#x27;已切换到「&#x27;+node().title+&#x27;」，保留该卡片的对话与草稿。&#x27;)}
+function explore(){const title=(selectedTerm||&#x27;新的知识&#x27;).replace(/[《》]/g,&#x27;&#x27;);let t=session.nodes.find(n=&gt;n.parent===node().id&amp;&amp;n.title===title);if(!t){t={id:&#x27;node&#x27;+seq++,parent:node().id,title,question:&#x27;请结合刚才的上下文，解释「&#x27;+title+&#x27;」。&#x27;,kind:(nodes().find(x=&gt;x.title===title)||{kind:&#x27;custom&#x27;}).kind,extra:[],draft:&#x27;&#x27;};session.nodes.push(t)}currentScene=&#x27;deep&#x27;;go(t.id);announce(&#x27;已展开「&#x27;+title+&#x27;」分支，并继承分叉前的上下文。&#x27;)}
+function newSession(){const s={id:&#x27;s&#x27;+seq++,title:&#x27;新的探索&#x27;,provider:defaultProvider,locked:false,nodes:[{id:&#x27;main&#x27;,parent:null,title:&#x27;主会话&#x27;,question:&#x27;&#x27;,kind:&#x27;custom&#x27;,extra:[],draft:&#x27;&#x27;}],active:&#x27;main&#x27;,web:&#x27;auto&#x27;,think:&#x27;deep&#x27;,assistant:[],assistantDraft:&#x27;&#x27;};sessions.unshift(s);session=s;assistantOpen=false;selectedTerm=&#x27;&#x27;;currentScene=&#x27;new&#x27;;$(&#x27;#kk-modal&#x27;).hidden=true;render(true)}
+function renderAssistant(){const panel=$(&#x27;#kk-assistant&#x27;);panel.hidden=!assistantOpen;if(!assistantOpen)return;panel.innerHTML=&#x27;&lt;div class=&quot;kk-assistant-header&quot;&gt;&lt;div&gt;&lt;h2&gt;&#x27;+icon(&#x27;sparkles&#x27;)+&#x27; 会话知识助手&lt;/h2&gt;&lt;p&gt;&#x27;+esc(providers[session.provider].model)+&#x27; · 与会话一致&lt;/p&gt;&lt;/div&gt;&lt;button data-action=&quot;close-assistant&quot; aria-label=&quot;关闭会话知识助手&quot;&gt;&#x27;+icon(&#x27;x&#x27;)+&#x27;&lt;/button&gt;&lt;/div&gt;&lt;div class=&quot;kk-assistant-scope&quot;&gt;本会话 · &#x27;+session.nodes.length+&#x27; 张卡片 · 可追溯到原始消息&lt;/div&gt;&lt;div class=&quot;kk-assistant-body&quot;&gt;&#x27;+(session.assistant.length?session.assistant.map(m=&gt;&#x27;&lt;div class=&quot;kk-user&quot;&gt;&#x27;+esc(m)+&#x27;&lt;/div&gt;&lt;p&gt;在这次探索里，我们讨论了动画电影的表达，以及它与技术、城市和个体处境的关系。&lt;/p&gt;&lt;p&gt;你可以回到这些卡片继续阅读：&lt;/p&gt;&#x27;+session.nodes.filter(n=&gt;n.parent).slice(0,2).map(n=&gt;&#x27;&lt;button class=&quot;kk-citation&quot; data-source=&quot;&#x27;+n.id+&#x27;&quot;&gt;&lt;div&gt;&#x27;+esc(n.title)+&#x27;&lt;span&gt;&#x27;+esc(path(n).map(p=&gt;p.title).join(&#x27; › &#x27;))+&#x27;&lt;/span&gt;&lt;/div&gt;&#x27;+icon(&#x27;arrow-up-right&#x27;)+&#x27;&lt;/button&gt;&#x27;).join(&#x27;&#x27;)).join(&#x27;&#x27;):&#x27;&lt;div class=&quot;kk-answer-label&quot;&gt;&#x27;+icon(&#x27;sparkles&#x27;)+&#x27; 把散开的思路，重新连起来。&lt;/div&gt;&lt;p&gt;我会从当前会话的所有分支中查找内容，帮你回顾、比较和整理。&lt;/p&gt;&lt;button class=&quot;kk-citation&quot; data-ask=&quot;我们刚才探索过哪些概念？&quot;&gt;我们刚才探索过哪些概念？&#x27;+icon(&#x27;arrow-up-right&#x27;)+&#x27;&lt;/button&gt;&#x27;)+&#x27;&lt;/div&gt;&#x27;+composer(true);icons()}
+function showProviders(){editProvider=session.provider;$(&#x27;#kk-modal&#x27;).hidden=false;renderProviders()}
+function renderProviders(){const p=providers[editProvider];$(&#x27;#kk-modal&#x27;).innerHTML=&#x27;&lt;section class=&quot;kk-settings&quot; role=&quot;dialog&quot; aria-modal=&quot;true&quot; aria-label=&quot;Provider 设置&quot;&gt;&lt;div class=&quot;kk-settings-header&quot;&gt;&lt;h2&gt;模型服务&lt;/h2&gt;&lt;button data-action=&quot;close-modal&quot; aria-label=&quot;关闭设置&quot;&gt;&#x27;+icon(&#x27;x&#x27;)+&#x27;&lt;/button&gt;&lt;/div&gt;&lt;p&gt;配置你的 Provider，为新的探索选择一个默认起点。&lt;/p&gt;&lt;div class=&quot;kk-settings-list&quot;&gt;&#x27;+providers.map((p,i)=&gt;&#x27;&lt;button data-edit-provider=&quot;&#x27;+i+&#x27;&quot; class=&quot;&#x27;+(i===editProvider?&#x27;selected&#x27;:&#x27;&#x27;)+&#x27;&quot;&gt;&lt;span class=&quot;kk-provider-mark&quot;&gt;&#x27;+p.mark+&#x27;&lt;/span&gt;&#x27;+esc(p.name)+(i===defaultProvider?&#x27;&lt;small&gt;默认&lt;/small&gt;&#x27;:&#x27;&#x27;)+&#x27;&lt;/button&gt;&#x27;).join(&#x27;&#x27;)+&#x27;&lt;button data-action=&quot;add-provider&quot;&gt;&#x27;+icon(&#x27;plus&#x27;)+&#x27; 兼容接口&lt;/button&gt;&lt;/div&gt;&lt;label class=&quot;kk-field&quot;&gt;配置名称&lt;input id=&quot;kk-config-name&quot; value=&quot;&#x27;+esc(p.name)+&#x27;&quot;&gt;&lt;/label&gt;&lt;label class=&quot;kk-field&quot;&gt;API 地址&lt;input id=&quot;kk-config-address&quot; value=&quot;&#x27;+esc(p.address)+&#x27;&quot;&gt;&lt;/label&gt;&lt;div class=&quot;kk-field-row&quot;&gt;&lt;label class=&quot;kk-field&quot;&gt;API Key&lt;input id=&quot;kk-config-key&quot; type=&quot;password&quot; autocomplete=&quot;off&quot; placeholder=&quot;仅演示，请勿填入真实密钥&quot;&gt;&lt;/label&gt;&lt;label class=&quot;kk-field&quot;&gt;默认模型&lt;input id=&quot;kk-config-model&quot; value=&quot;&#x27;+esc(p.model)+&#x27;&quot;&gt;&lt;/label&gt;&lt;/div&gt;&lt;label class=&quot;kk-default&quot;&gt;&lt;input id=&quot;kk-config-default&quot; type=&quot;checkbox&quot; &#x27;+(defaultProvider===editProvider?&#x27;checked&#x27;:&#x27;&#x27;)+&#x27;&gt; 设为新会话的默认 Provider&lt;/label&gt;&lt;div class=&quot;kk-settings-actions&quot;&gt;&lt;button data-action=&quot;test-provider&quot;&gt;&#x27;+icon(&#x27;plug&#x27;)+&#x27; 测试连接&lt;/button&gt;&lt;button class=&quot;kk-save&quot; data-action=&quot;save-provider&quot;&gt;保存设置&lt;/button&gt;&lt;/div&gt;&lt;div class=&quot;kk-settings-note&quot; id=&quot;kk-settings-note&quot;&gt;修改默认项只影响新会话。这里是配置交互演示。&lt;/div&gt;&lt;/section&gt;&#x27;;icons()}
+function scene(s){currentScene=s;assistantOpen=false;$(&#x27;#kk-modal&#x27;).hidden=true;if(s===&#x27;new&#x27;){newSession();return}session=sessions.find(s=&gt;s.id===&#x27;demo&#x27;)||sessions[0];if(!session.locked){session.locked=true;session.nodes=nodes();session.title=&#x27;日本电影与叙事&#x27;}if(s===&#x27;deep&#x27;||s===&#x27;assistant&#x27;)session.nodes=nodes();session.active=s===&#x27;deep&#x27;?&#x27;cyber&#x27;:&#x27;main&#x27;;selectedTerm=s===&#x27;explore&#x27;?&#x27;阿基拉&#x27;:&#x27;&#x27;;if(s===&#x27;assistant&#x27;){assistantOpen=true;session.active=&#x27;cyber&#x27;;if(!session.assistant.length)session.assistant.push(&#x27;我们聊到的赛博朋克，和《阿基拉》有什么关系？&#x27;)}render(true);if(s===&#x27;providers&#x27;)showProviders()}
+function stopPlay(){playing=false;timers.forEach(clearTimeout);timers=[];$(&#x27;#kk-play&#x27;).innerHTML=icon(&#x27;play&#x27;)+&#x27; 播放探索过程&#x27;;icons()}
+function play(){if(playing){stopPlay();return}playing=true;$(&#x27;#kk-play&#x27;).innerHTML=icon(&#x27;pause&#x27;)+&#x27; 停止演示&#x27;;session=sessions.find(s=&gt;s.id===&#x27;demo&#x27;)||sessions[0];session.nodes=nodes().slice(0,1);scene(&#x27;explore&#x27;);timers.push(setTimeout(()=&gt;{selectedTerm=&#x27;阿基拉&#x27;;explore();announce(&#x27;探索《阿基拉》：主会话留在下层。&#x27;)},2000),setTimeout(()=&gt;{showSelection(&#x27;赛博朋克&#x27;);announce(&#x27;选中新的概念，还可以继续深入。&#x27;)},4000),setTimeout(()=&gt;{selectedTerm=&#x27;赛博朋克&#x27;;explore();announce(&#x27;第二层分支已展开，右侧路径同步高亮。&#x27;)},5700),setTimeout(()=&gt;{go(&#x27;main&#x27;);announce(&#x27;点击树节点，直接返回主会话。&#x27;)},8000),setTimeout(()=&gt;{scene(&#x27;assistant&#x27;);announce(&#x27;知识助手跨分支回答，并提供来源入口。&#x27;)},10000),setTimeout(stopPlay,12000));icons()}
+root.addEventListener(&#x27;click&#x27;,e=&gt;{const b=e.target.closest(&#x27;button&#x27;);if(!b||!root.contains(b))return;if(b.dataset.scene){stopPlay();scene(b.dataset.scene);return}if(b.dataset.node){go(b.dataset.node);return}if(b.dataset.source){assistantOpen=false;go(b.dataset.source);$(&#x27;.kk-foreground&#x27;).classList.add(&#x27;kk-highlight&#x27;);announce(&#x27;已定位来源卡片中的示例回答。&#x27;);return}if(b.dataset.session){session=sessions.find(s=&gt;s.id===b.dataset.session);assistantOpen=false;selectedTerm=&#x27;&#x27;;render();return}if(b.dataset.delete){const i=sessions.findIndex(s=&gt;s.id===b.dataset.delete);sessions.splice(i,1);if(!sessions.length)newSession();else{if(session.id===b.dataset.delete)session=sessions[0];render()}announce(&#x27;已删除演示会话。&#x27;);return}if(b.dataset.term){const picked=window.getSelection()?.toString().trim();if(picked){captureSelection();return}const existing=session.nodes.find(n=&gt;n.title===b.dataset.term.replace(/[《》]/g,&#x27;&#x27;));if(existing&amp;&amp;existing.id!==node().id)go(existing.id);else showSelection(b.dataset.term);return}if(b.dataset.suggest){node().draft=b.dataset.suggest;render();$(&#x27;textarea&#x27;).focus();return}if(b.dataset.ask){session.assistant.push(b.dataset.ask);renderAssistant();return}if(b.dataset.provider!==undefined){editProvider=Number(b.dataset.provider);$(&#x27;#kk-modal&#x27;).hidden=false;renderProviders();return}if(b.dataset.editProvider!==undefined){editProvider=Number(b.dataset.editProvider);renderProviders();return}
+switch(b.dataset.action){case&#x27;send&#x27;:sendMessage(b.closest(&#x27;form&#x27;));break;case&#x27;new&#x27;:newSession();break;case&#x27;explore&#x27;:explore();window.getSelection()?.removeAllRanges();break;case&#x27;quote&#x27;:quoteSelection();break;case&#x27;remove-quote&#x27;:node().quote=null;render();$(&#x27;.kk-foreground textarea&#x27;)?.focus();break;case&#x27;select&#x27;:showSelection(node().kind===&#x27;akira&#x27;?&#x27;赛博朋克&#x27;:node().id===&#x27;main&#x27;?&#x27;阿基拉&#x27;:&#x27;新的概念&#x27;);break;case&#x27;assistant&#x27;:assistantOpen=!assistantOpen;renderAssistant();break;case&#x27;close-assistant&#x27;:assistantOpen=false;renderAssistant();break;case&#x27;providers&#x27;:showProviders();break;case&#x27;close-modal&#x27;:$(&#x27;#kk-modal&#x27;).hidden=true;break;case&#x27;add-provider&#x27;:providers.push({name:&#x27;自定义接口&#x27;,model:&#x27;自定义模型&#x27;,address:&#x27;https://your-provider.example/v1&#x27;,mark:&#x27;C&#x27;});editProvider=providers.length-1;renderProviders();break;case&#x27;test-provider&#x27;:$(&#x27;#kk-settings-note&#x27;).textContent=&#x27;此原型未连接 API；正式版将在这里验证密钥与模型可用性。&#x27;;break;case&#x27;save-provider&#x27;:{const p=providers[editProvider];p.name=$(&#x27;#kk-config-name&#x27;).value||p.name;p.address=$(&#x27;#kk-config-address&#x27;).value;p.model=$(&#x27;#kk-config-model&#x27;).value||p.model;if($(&#x27;#kk-config-default&#x27;).checked)defaultProvider=editProvider;$(&#x27;#kk-modal&#x27;).hidden=true;render();announce(&#x27;演示设置已保存。新会话将默认使用 &#x27;+providers[defaultProvider].name+&#x27;。&#x27;);break}case&#x27;sidebar&#x27;:$(&#x27;.kk-sidebar&#x27;).classList.toggle(&#x27;kk-visible&#x27;);break;case&#x27;copy&#x27;:announce(&#x27;复制入口示意：正式版会复制当前回答。&#x27;);break;case&#x27;play&#x27;:play();break;}
+});
+root.addEventListener(&#x27;input&#x27;,e=&gt;{if(e.target.matches(&#x27;textarea&#x27;)){const f=e.target.closest(&#x27;form&#x27;);if(f.dataset.form===&#x27;assistant&#x27;)session.assistantDraft=e.target.value;else node().draft=e.target.value}});
+root.addEventListener(&#x27;change&#x27;,e=&gt;{if(e.target.matches(&#x27;.kk-model-picker&#x27;)&amp;&amp;!session.locked){session.provider=Number(e.target.value);render();announce(&#x27;本会话将使用 &#x27;+providers[session.provider].name+&#x27;；发送前仍可更改。&#x27;)}if(e.target.id===&#x27;kk-web&#x27;){session.web=e.target.value;announce(&#x27;联网设置已更新，将应用于后续消息。&#x27;)}if(e.target.id===&#x27;kk-think&#x27;){session.think=e.target.value;announce(&#x27;思考设置已更新，将应用于后续消息。&#x27;)}});
+function sendMessage(form){if(!form||!form.matches(&#x27;[data-form]&#x27;))return;const value=form.querySelector(&#x27;textarea&#x27;).value.trim();if(!value)return;if(form.dataset.form===&#x27;assistant&#x27;){session.locked=true;session.assistant.push(value);session.assistantDraft=&#x27;&#x27;;render();return}if(!session.locked){session.locked=true;session.title=value.length&gt;13?value.slice(0,13)+&#x27;…&#x27;:value;node().question=value;node().title=&#x27;主会话&#x27;;node().kind=value.includes(&#x27;日本&#x27;)?&#x27;main&#x27;:&#x27;custom&#x27;}else node().extra.push({text:value,quote:node().quote||null});node().quote=null;node().draft=&#x27;&#x27;;selectedTerm=&#x27;&#x27;;render(true);announce(&#x27;消息已发送。此会话的 Provider 与模型已锁定。&#x27;)}
+root.addEventListener(&#x27;submit&#x27;,e=&gt;{e.preventDefault();sendMessage(e.target)});
+root.addEventListener(&#x27;keydown&#x27;,e=&gt;{if(e.key===&#x27;Escape&#x27;){hideSelection();assistantOpen=false;$(&#x27;#kk-modal&#x27;).hidden=true;renderAssistant();$(&#x27;.kk-sidebar&#x27;).classList.remove(&#x27;kk-visible&#x27;)}if(e.target.matches(&#x27;textarea&#x27;)&amp;&amp;e.key===&#x27;Enter&#x27;&amp;&amp;!e.shiftKey&amp;&amp;!e.isComposing){e.preventDefault();sendMessage(e.target.closest(&#x27;form&#x27;))}});
+root.addEventListener(&#x27;mouseup&#x27;,e=&gt;{if(e.target.closest(&#x27;[data-answer]&#x27;))captureSelection()});
+root.addEventListener(&#x27;keyup&#x27;,e=&gt;{if(e.key===&#x27;Shift&#x27;||e.key.startsWith(&#x27;Arrow&#x27;))captureSelection()});
+root.addEventListener(&#x27;pointerdown&#x27;,e=&gt;{if(e.target.closest(&#x27;.kk-selection-actions&#x27;))e.preventDefault();else if(!e.target.closest(&#x27;[data-answer]&#x27;))hideSelection()});
+function applyDesign(){root.style.setProperty(&#x27;--kk-radius&#x27;,design.radius+&#x27;px&#x27;);const blue=design.accent===&#x27;blue&#x27;;root.style.setProperty(&#x27;--kk-accent&#x27;,blue?&#x27;light-dark(#3f638c,#9fbedf)&#x27;:&#x27;light-dark(#356750,#a2cbb2)&#x27;);root.style.setProperty(&#x27;--kk-soft&#x27;,blue?&#x27;light-dark(#e8eef6,#2b3d50)&#x27;:&#x27;light-dark(#e8f0e7,#2e4235)&#x27;);root.style.setProperty(&#x27;--kk-button&#x27;,blue?&#x27;light-dark(#3f638c,#9fbedf)&#x27;:&#x27;light-dark(#356750,#a2cbb2)&#x27;);render()}
+scene(&#x27;deep&#x27;);showSelection(&#x27;赛博朋克&#x27;);
+let lastTreeWidth=0;const treeObserver=new ResizeObserver(entries=&gt;{const width=entries[0].contentRect.width;if(Math.abs(width-lastTreeWidth)&gt;1){lastTreeWidth=width;drawTree()}});treeObserver.observe($(&#x27;#kk-tree&#x27;));
+if(globalThis.Tweak){const tweak=new Tweak({container:root,onChange:applyDesign});tweak.addSelect(design,&#x27;accent&#x27;,{label:&#x27;强调色&#x27;,options:[{label:&#x27;森林绿&#x27;,value:&#x27;forest&#x27;},{label:&#x27;雾蓝&#x27;,value:&#x27;blue&#x27;}]});tweak.addSlider(design,&#x27;rotation&#x27;,{label:&#x27;每层旋转角度&#x27;,min:3,max:6,step:.5,unit:&#x27;°&#x27;});tweak.addSlider(design,&#x27;blur&#x27;,{label:&#x27;底层模糊强度&#x27;,min:.5,max:2.5,step:.1,unit:&#x27;px&#x27;});tweak.addSlider(design,&#x27;radius&#x27;,{label:&#x27;卡片圆角&#x27;,min:6,max:22,unit:&#x27;px&#x27;});}
+})();
+&lt;/script&gt;
+
+&lt;script src=&quot;https://unpkg.com/@floating-ui/core@1.7.3/dist/floating-ui.core.umd.min.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;https://unpkg.com/@floating-ui/dom@1.7.4/dist/floating-ui.dom.umd.min.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+(() =&gt; {
+  if (window.FloatingUIDOM == null) {
+    return;
+  }
+  const { autoUpdate, computePosition, flip, offset, shift, size } =
+    window.FloatingUIDOM;
+  const tooltipPlacements = new Set([&quot;top&quot;, &quot;right&quot;, &quot;bottom&quot;, &quot;left&quot;]);
+  const tooltipId = `codex-visualization-tooltip-${
+    window.crypto?.randomUUID?.() ?? Date.now().toString(36)
+  }`;
+  const tooltipGap = 5;
+  const hoverDelay = 700;
+  const skipDelay = 300;
+  let activeTrigger = null;
+  let pendingTrigger = null;
+  let tooltip = null;
+  let openTimeout = null;
+  let autoUpdateCleanup = null;
+  let positionRequest = 0;
+  let skipDelayUntil = 0;
+  let lastPointerWasTouch = false;
+  let pinnedByTouch = false;
+
+  const getTrigger = (target) =&gt;
+    target?.nodeType === Node.ELEMENT_NODE
+      ? target.closest(&quot;[data-tooltip]&quot;)
+      : null;
+  const containsTarget = (trigger, target) =&gt;
+    target?.nodeType != null &amp;&amp; trigger.contains(target);
+  const getContent = (trigger) =&gt;
+    trigger.getAttribute(&quot;data-tooltip&quot;)?.trim() ?? &quot;&quot;;
+  const getPlacement = (trigger) =&gt; {
+    const placement = trigger.getAttribute(&quot;data-tooltip-placement&quot;);
+    return tooltipPlacements.has(placement) ? placement : &quot;top&quot;;
+  };
+  const getTooltip = () =&gt; {
+    if (tooltip == null) {
+      tooltip = document.createElement(&quot;div&quot;);
+      tooltip.id = tooltipId;
+      tooltip.className = &quot;tooltip&quot;;
+      tooltip.setAttribute(&quot;role&quot;, &quot;tooltip&quot;);
+    }
+    return tooltip;
+  };
+  const setDescribedBy = (trigger, described) =&gt; {
+    const ids = new Set(
+      (trigger.getAttribute(&quot;aria-describedby&quot;) ?? &quot;&quot;)
+        .split(/\s+/)
+        .filter(Boolean),
+    );
+    if (described) {
+      ids.add(tooltipId);
+    } else {
+      ids.delete(tooltipId);
+    }
+    if (ids.size === 0) {
+      trigger.removeAttribute(&quot;aria-describedby&quot;);
+    } else {
+      trigger.setAttribute(&quot;aria-describedby&quot;, [...ids].join(&quot; &quot;));
+    }
+  };
+  const clearOpenTimeout = () =&gt; {
+    if (openTimeout != null) {
+      window.clearTimeout(openTimeout);
+      openTimeout = null;
+    }
+    pendingTrigger = null;
+  };
+  const closeTooltip = (activateSkipDelay = true) =&gt; {
+    clearOpenTimeout();
+    pinnedByTouch = false;
+    positionRequest += 1;
+    autoUpdateCleanup?.();
+    autoUpdateCleanup = null;
+    if (activeTrigger == null) {
+      return;
+    }
+    setDescribedBy(activeTrigger, false);
+    activeTrigger = null;
+    tooltip?.remove();
+    if (activateSkipDelay) {
+      skipDelayUntil = Date.now() + skipDelay;
+    }
+  };
+  const updatePosition = (trigger, floating) =&gt; {
+    const request = ++positionRequest;
+    void computePosition(trigger, floating, {
+      middleware: [
+        offset(tooltipGap),
+        flip({ padding: tooltipGap }),
+        shift({ padding: tooltipGap }),
+        size({
+          padding: tooltipGap,
+          apply({ availableHeight, availableWidth, elements }) {
+            elements.floating.style.setProperty(
+              &quot;--tooltip-available-width&quot;,
+              `${Math.max(0, availableWidth)}px`,
+            );
+            elements.floating.style.setProperty(
+              &quot;--tooltip-available-height&quot;,
+              `${Math.max(0, availableHeight)}px`,
+            );
+          },
+        }),
+      ],
+      placement: getPlacement(trigger),
+      strategy: &quot;fixed&quot;,
+    })
+      .then(({ x, y }) =&gt; {
+        if (activeTrigger !== trigger || request !== positionRequest) {
+          return;
+        }
+        const scale = window.devicePixelRatio || 1;
+        floating.style.transform = `translate(${Math.round(x * scale) / scale}px, ${Math.round(y * scale) / scale}px)`;
+        floating.style.visibility = &quot;visible&quot;;
+      })
+      .catch(() =&gt; {
+        if (activeTrigger === trigger &amp;&amp; request === positionRequest) {
+          closeTooltip(false);
+        }
+      });
+  };
+  const openTooltip = (trigger) =&gt; {
+    const content = getContent(trigger);
+    if (!trigger.isConnected || content.length === 0) {
+      return;
+    }
+    clearOpenTimeout();
+    if (activeTrigger === trigger) {
+      return;
+    }
+    closeTooltip();
+    const floating = getTooltip();
+    floating.textContent = content;
+    floating.style.visibility = &quot;hidden&quot;;
+    floating.style.transform = &quot;translate(0, 0)&quot;;
+    document.body.appendChild(floating);
+    activeTrigger = trigger;
+    setDescribedBy(trigger, true);
+    autoUpdateCleanup = autoUpdate(trigger, floating, () =&gt; {
+      updatePosition(trigger, floating);
+    });
+  };
+  const requestOpen = (trigger, immediate = false) =&gt; {
+    if (
+      getContent(trigger).length === 0 ||
+      activeTrigger === trigger ||
+      pendingTrigger === trigger
+    ) {
+      return;
+    }
+    clearOpenTimeout();
+    pendingTrigger = trigger;
+    const delay =
+      immediate || activeTrigger != null || Date.now() &lt; skipDelayUntil
+        ? 0
+        : hoverDelay;
+    if (delay === 0) {
+      openTooltip(trigger);
+      return;
+    }
+    openTimeout = window.setTimeout(() =&gt; {
+      openTimeout = null;
+      pendingTrigger = null;
+      openTooltip(trigger);
+    }, delay);
+  };
+  const handlePointerOpen = (event) =&gt; {
+    if (event.pointerType === &quot;touch&quot;) {
+      return;
+    }
+    const trigger = getTrigger(event.target);
+    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
+      return;
+    }
+    requestOpen(trigger);
+  };
+  const handlePointer = (event) =&gt; {
+    lastPointerWasTouch =
+      event.type === &quot;pointerdown&quot; &amp;&amp; event.pointerType === &quot;touch&quot;;
+  };
+  const handleTouchClick = (event) =&gt; {
+    const isTouch = event.pointerType === &quot;touch&quot; || lastPointerWasTouch;
+    lastPointerWasTouch = false;
+    if (!isTouch || event.detail === 0) {
+      return;
+    }
+    const trigger = getTrigger(event.target);
+    if (
+      trigger == null ||
+      !trigger.isConnected ||
+      getContent(trigger).length === 0 ||
+      (pinnedByTouch &amp;&amp; activeTrigger === trigger)
+    ) {
+      if (pinnedByTouch) {
+        closeTooltip();
+      }
+      return;
+    }
+    openTooltip(trigger);
+    pinnedByTouch = activeTrigger === trigger;
+    window.setTimeout(() =&gt; {
+      if (activeTrigger === trigger &amp;&amp; !trigger.isConnected) {
+        closeTooltip(false);
+      }
+    }, 0);
+  };
+  const handleLeave = (event) =&gt; {
+    if (pinnedByTouch) {
+      return;
+    }
+    const trigger = getTrigger(event.target);
+    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
+      return;
+    }
+    if (activeTrigger === trigger || pendingTrigger === trigger) {
+      closeTooltip();
+    }
+  };
+  const handleFocusIn = (event) =&gt; {
+    const trigger = getTrigger(event.target);
+    if (trigger?.matches(&quot;:focus-visible&quot;)) {
+      requestOpen(trigger, true);
+    }
+  };
+  const handleKeyDown = (event) =&gt; {
+    if (event.key === &quot;Escape&quot;) {
+      closeTooltip();
+    }
+  };
+  const handleContextMenu = (event) =&gt; {
+    lastPointerWasTouch = false;
+    const trigger = getTrigger(event.target);
+    if (activeTrigger === trigger || pendingTrigger === trigger) {
+      closeTooltip();
+    }
+  };
+  const destroy = () =&gt; {
+    closeTooltip(false);
+    lastPointerWasTouch = false;
+    document.removeEventListener(&quot;pointerover&quot;, handlePointerOpen);
+    document.removeEventListener(&quot;pointerdown&quot;, handlePointer);
+    document.removeEventListener(&quot;pointercancel&quot;, handlePointer);
+    document.removeEventListener(&quot;click&quot;, handleTouchClick);
+    document.removeEventListener(&quot;pointerout&quot;, handleLeave);
+    document.removeEventListener(&quot;focusin&quot;, handleFocusIn);
+    document.removeEventListener(&quot;focusout&quot;, handleLeave);
+    document.removeEventListener(&quot;keydown&quot;, handleKeyDown);
+    document.removeEventListener(&quot;contextmenu&quot;, handleContextMenu);
+    tooltip = null;
+  };
+
+  document.addEventListener(&quot;pointerover&quot;, handlePointerOpen);
+  document.addEventListener(&quot;pointerdown&quot;, handlePointer);
+  document.addEventListener(&quot;pointercancel&quot;, handlePointer);
+  document.addEventListener(&quot;click&quot;, handleTouchClick);
+  document.addEventListener(&quot;pointerout&quot;, handleLeave);
+  document.addEventListener(&quot;focusin&quot;, handleFocusIn);
+  document.addEventListener(&quot;focusout&quot;, handleLeave);
+  document.addEventListener(&quot;keydown&quot;, handleKeyDown);
+  document.addEventListener(&quot;contextmenu&quot;, handleContextMenu);
+  window.addEventListener(&quot;pagehide&quot;, destroy, { once: true });
+})();
+&lt;/script&gt;
+&lt;script id=&quot;codex-visualization-tabs&quot;&gt;
+(() =&gt; {
+  const selector = &#x27;.nav[role=&quot;tablist&quot;] [role=&quot;tab&quot;]&#x27;;
+  const disabled = &#x27;:disabled,[aria-disabled=&quot;true&quot;]&#x27;;
+  const selectTab = (selected) =&gt; {
+    const panelId = selected.getAttribute(&quot;aria-controls&quot;);
+    for (const tab of selected.closest(&#x27;[role=&quot;tablist&quot;]&#x27;).querySelectorAll(&#x27;[role=&quot;tab&quot;]&#x27;)) {
+      const active = tab === selected;
+      tab.classList.toggle(&quot;active&quot;, active);
+      tab.setAttribute(&quot;aria-selected&quot;, String(active));
+      const id = tab.getAttribute(&quot;aria-controls&quot;);
+      const panel = id &amp;&amp; document.getElementById(id);
+      if (panel != null) {
+        panel.hidden = id !== panelId;
+        if (!panel.hidden &amp;&amp; selected.id) {
+          panel.setAttribute(&quot;aria-labelledby&quot;, selected.id);
+        }
+      }
+    }
+  };
+  const interact = (event) =&gt; {
+    const tab = event.target?.closest?.(selector);
+    if (event.defaultPrevented || tab == null || tab.matches(disabled)) {
+      return;
+    }
+    if (event.type === &quot;click&quot;) {
+      selectTab(tab);
+      return;
+    }
+    const tabs = Array.from(
+      tab.closest(&#x27;[role=&quot;tablist&quot;]&#x27;).querySelectorAll(&#x27;[role=&quot;tab&quot;]&#x27;),
+    ).filter((candidate) =&gt; !candidate.matches(disabled));
+    const current = tabs.indexOf(tab);
+    let next;
+    if (event.key === &quot;ArrowRight&quot; || event.key === &quot;ArrowDown&quot;) {
+      next = (current + 1) % tabs.length;
+    } else if (event.key === &quot;ArrowLeft&quot; || event.key === &quot;ArrowUp&quot;) {
+      next = (current + tabs.length - 1) % tabs.length;
+    } else if (event.key === &quot;Home&quot;) {
+      next = 0;
+    } else if (event.key === &quot;End&quot;) {
+      next = tabs.length - 1;
+    } else {
+      return;
+    }
+    event.preventDefault();
+    tabs[next].focus();
+    selectTab(tabs[next]);
+  };
+
+  for (const list of document.querySelectorAll(&#x27;.nav[role=&quot;tablist&quot;]&#x27;)) {
+    const selected =
+      list.querySelector(&#x27;[role=&quot;tab&quot;][aria-selected=&quot;true&quot;]&#x27;) ??
+      list.querySelector(&#x27;[role=&quot;tab&quot;].active&#x27;) ??
+      list.querySelector(&#x27;[role=&quot;tab&quot;]&#x27;);
+    if (selected != null) {
+      selectTab(selected);
+    }
+  }
+  document.addEventListener(&quot;click&quot;, interact);
+  document.addEventListener(&quot;keydown&quot;, interact);
+  window.addEventListener(&quot;pagehide&quot;, () =&gt; {
+    document.removeEventListener(&quot;click&quot;, interact);
+    document.removeEventListener(&quot;keydown&quot;, interact);
+  }, { once: true });
+})();
+&lt;/script&gt;
+&lt;script id=&quot;codex-visualization-lucide&quot; async src=&quot;https://unpkg.com/lucide@1.17.0/dist/umd/lucide.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+(() =&gt; {
+  const initialize = () =&gt; {
+    globalThis.lucide?.createIcons({ attrs: { width: 16, height: 16 } });
+  };
+  if (globalThis.lucide != null) {
+    initialize();
+    return;
+  }
+  document
+    .getElementById(&quot;codex-visualization-lucide&quot;)
+    ?.addEventListener(&quot;load&quot;, initialize, { once: true });
+})();
+&lt;/script&gt;
+
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe>
+</body>
+</html>

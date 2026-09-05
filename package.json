@@ -1,0 +1,43 @@
+{
+  "name": "know-know",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Know Know — 以知识探索分支组织对话的个人本机 AI 应用（1.0，无登录）",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "concurrently -n server,client -c green,blue \"npm:dev:server\" \"npm:dev:client\"",
+    "dev:server": "tsx watch src/server/index.ts",
+    "dev:client": "vite",
+    "build": "tsc -p tsconfig.client.json && vite build",
+    "start": "tsx src/server/index.ts",
+    "migrate": "tsx src/server/migrate.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.13.0",
+    "@hono/zod-validator": "^0.4.1",
+    "better-sqlite3": "^11.3.0",
+    "hono": "^4.6.0",
+    "keytar": "^7.9.0",
+    "marked": "^14.1.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/node": "^22.5.0",
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "concurrently": "^9.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.0",
+    "vitest": "^2.1.0"
+  }
+}

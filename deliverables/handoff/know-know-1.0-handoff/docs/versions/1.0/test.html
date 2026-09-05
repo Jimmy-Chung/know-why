@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Know Know 1.0 · 测试说明</title><style>
+:root { color-scheme: light dark; --bg: light-dark(#f6f7f4,#171d1a); --text: light-dark(#273b32,#e1e9e3); --line: light-dark(#dfe5dd,#37433b); --accent: light-dark(#356750,#a2cbb2); }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.8 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif; }
+header { border-bottom: 1px solid var(--line); padding: 20px max(24px,calc((100% - 1100px)/2)); }
+nav { display: flex; flex-wrap: wrap; gap: 10px 24px; margin-top: 8px; }
+a { color: var(--accent); text-underline-offset: 4px; }
+main { max-width: 1150px; padding: 32px 24px 80px; margin: auto; overflow-wrap: anywhere; }
+h1,h2,h3 { line-height: 1.4; } h1 { font-size: 30px; } h2 { margin-top: 40px; font-size: 23px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 24px 0; }
+th,td { text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); padding: 12px 10px; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; padding: 20px; border: 1px solid var(--line); }
+code { font-size: .9em; } li { margin-bottom: 8px; }
+.notice { border-left: 3px solid var(--accent); padding-left: 16px; }
+.entries { list-style: none; padding: 0; } .entries li { padding: 18px 0; border-bottom: 1px solid var(--line); }
+@media (max-width: 600px) { main { padding: 20px 16px 50px; } h1 { font-size: 25px; } table { display: block; overflow-x: auto; } }
+@media print { header { display: none; } body { color: #111; background: #fff; } main { max-width: none; } }
+</style></head>
+<body><header><strong>Know Know · 1.0 版本评审</strong><nav aria-label="评审资料"><a href="index.html">版本首页</a><a href="product.html">产品说明</a><a href="handoff.html">开发交接</a><a href="interaction.html">交互说明</a><a href="prototype.html">交互原型 ↗</a><a href="test.html">测试说明</a><a href="technical.html">技术方案</a><a href="../1.1/index.html">1.1 规划</a></nav></header><main><h1>Know Know 测试说明 1.0</h1>
+<p>版本：1.0 · 2026-09-05<br />
+状态：测试设计已编写；正式应用尚未开发，以下用例均未执行。</p>
+<p>配套交付：<a href="./product.html">产品说明书 1.0</a> · <a href="./prototype.html">交互原型 1.0</a> · <a href="./index.html">评审入口</a>。</p>
+<h2>1. 测试范围与环境</h2>
+<p>1.0 是个人本机使用版，通过浏览器访问本地服务，<strong>不包含登录、注册及多用户模块</strong>。登录、退出和用户间权限隔离属于 <a href="../1.1/product.html">1.1</a>，不作为 1.0 的交付条件。</p>
+<p>目标环境为当前 macOS 与桌面浏览器。正式测试时记录系统、浏览器、应用构建版本、模型 ID、接口类型、搜索服务和测试日期，不记录明文密钥。浏览器缩放、窗口变窄和键盘操作列入交互检查。</p>
+<p>分三类记录结果：</p>
+<ul>
+<li>原型检查：验证界面与操作表达，示例回答不能验证模型、搜索或存储。</li>
+<li>模拟集成：验证参数映射、状态、失败路径、快照和数据边界。</li>
+<li>真实联调：使用本机配置的真实模型及搜索服务，验证实际返回、来源及用量。</li>
+</ul>
+<p>这三类结果分别记录，不能用原型或模拟通过代替真实联调。</p>
+<h2>2. 测试数据与前置条件</h2>
+<ul>
+<li>配置 OpenAI、DeepSeek 两个 Provider，指定其中一个为默认；另准备一个没有原生搜索能力的兼容模型。</li>
+<li>独立搜索服务配置有效凭据，另准备可控的鉴权失败、不可达和空结果场景。</li>
+<li>会话甲讨论影视叙事，主卡片包含“赛博朋克是一类科幻表达”和《阿基拉》；创建《阿基拉》与另一个概念的兄弟分支，再创建孙分支。</li>
+<li>会话乙写入只存在于该会话的测试标记，用于验证知识助手不会跨会话召回。</li>
+<li>准备带重复术语、Markdown 强调、跨行文本的回答，以及可以触发上下文摘要的长记录。</li>
+<li>所有正式应用用例从明确的数据库初始状态执行；删除和恢复使用可丢弃的测试数据。</li>
+</ul>
+<h2>3. 用例与预期结果</h2>
+<p>每个用例初始状态均为 <strong>未执行</strong>。A 编号对应产品说明书中的验收条目。</p>
+<table>
+<thead>
+<tr>
+<th>用例</th>
+<th>关联</th>
+<th>操作步骤</th>
+<th>预期结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>T01 本机直接使用</td>
+<td>版本边界</td>
+<td>启动本地服务；在浏览器打开应用；新建会话。</td>
+<td>直接进入应用，无登录、注册或账号验证前置步骤。</td>
+</tr>
+<tr>
+<td>T02 默认模型与锁定</td>
+<td>A01</td>
+<td>设置默认 Provider；新建会话并切换模型；发送首条消息；进入子卡片和知识助手；修改全局默认项后再建会话。</td>
+<td>首条消息前可切换；开始聊天后全会话绑定不变；新默认值仅影响以后创建的会话。</td>
+</tr>
+<tr>
+<td>T03 锁定边界</td>
+<td>A01</td>
+<td>分别发送空消息、本地校验失败消息、通过本地校验但远端失败的消息；另建会话先向知识助手发消息。</td>
+<td>前两者不锁定；进入处理队列后即使远端失败也锁定；知识助手首条消息同样触发锁定。</td>
+</tr>
+<tr>
+<td>T04 选区双操作</td>
+<td>A02</td>
+<td>选中“赛博朋克”；再选重复术语、跨行内容；按 Escape。</td>
+<td>选区附近出现引用、探索两个图标，说明可辨；锚点准确；Escape 收起浮层。</td>
+</tr>
+<tr>
+<td>T05 引用与草稿</td>
+<td>A03</td>
+<td>输入草稿；选词并点击引用；移除引用；重新引用并发送追问。</td>
+<td>不自动发送、不丢草稿；原卡片新增带来源的引用消息；树节点数量不变。</td>
+</tr>
+<tr>
+<td>T06 递归探索与回链</td>
+<td>A04</td>
+<td>从主卡片创建子分支，再创建孙分支；点击来源原文里的分支入口。</td>
+<td>各自独立记录；父子关系和选区准确；原文入口能回到对应分支，父卡片草稿保留。</td>
+</tr>
+<tr>
+<td>T07 上下文隔离</td>
+<td>A05</td>
+<td>分叉后给父卡片追加专有标记，并给兄弟分支追加另一标记；检查子分支后续请求输入。</td>
+<td>子分支保留分叉时背景，输入不自动包含后来的父消息或兄弟消息；以请求构造和快照检查为证据。</td>
+</tr>
+<tr>
+<td>T08 卡片堆叠</td>
+<td>A06</td>
+<td>创建多层分支；切换父、子及兄弟卡片；输入、选词、调整窗口宽度。</td>
+<td>当前卡片始终水平清晰；背景逆时针旋转并模糊；文字可读，输入与选词未被背景遮挡。</td>
+</tr>
+<tr>
+<td>T09 纯树导航</td>
+<td>A07</td>
+<td>查看默认树；Hover 和键盘聚焦节点；点击另一节点再返回。</td>
+<td>默认没有节点标题；聚焦与 Hover 可获知标题；活动路径高亮，目标卡片、草稿和阅读位置恢复。</td>
+</tr>
+<tr>
+<td>T10 会话管理</td>
+<td>F01</td>
+<td>新建、重命名、切换、删除测试会话；如实现回收区则恢复。</td>
+<td>列表和内容一致；删除范围明确，其他会话不受影响；刷新后状态一致。</td>
+</tr>
+<tr>
+<td>T11 真实 Provider</td>
+<td>A08</td>
+<td>各使用 OpenAI、DeepSeek 发送一条消息并持续追问；再测试无效凭据和不存在的模型。</td>
+<td>获得真实响应与流式状态；错误原因可辨；不会用演示答案冒充调用成功。</td>
+</tr>
+<tr>
+<td>T12 联网模式</td>
+<td>A09</td>
+<td>在关闭、自动、强制三种模式发送测试问题；查看实际搜索事件与来源。</td>
+<td>关闭不产生新搜索；自动允许搜索或不搜索，记录实际选择；强制实际调用检索并给出可追溯资料。</td>
+</tr>
+<tr>
+<td>T13 独立搜索</td>
+<td>A14</td>
+<td>使用无原生搜索能力的兼容模型，配置独立搜索，强制搜索并回答。</td>
+<td>本地服务实际调用独立搜索；模型绑定不变；回答引用映射到真实资料；资料摘要与实际抓取正文可区分。</td>
+</tr>
+<tr>
+<td>T14 搜索异常</td>
+<td>A10</td>
+<td>搜索凭据无效、网络超时、空结果、来源读取失败；在强制模式尝试继续。</td>
+<td>明确区分错误和无结果，不显示虚假的已核实状态；失败可重试或主动关闭联网；不静默切换未配置服务。</td>
+</tr>
+<tr>
+<td>T15 思考参数</td>
+<td>A11</td>
+<td>切换支持的思考档位；检查发出的参数；测试不支持档位的模型；生成中更改设置。</td>
+<td>参数与真实能力一致；不支持时禁用并说明；当前运行保持发送时快照，新设置作用于下一次请求。</td>
+</tr>
+<tr>
+<td>T16 知识助手</td>
+<td>A12</td>
+<td>询问甲会话探索过的概念及分支间关系，连续追问并点击引用；询问仅乙会话包含的标记。</td>
+<td>持续自然语言回答；证据来自甲的真实消息，导航准确；不召回乙内容，未找到时如实说明；助手不新增树节点。</td>
+</tr>
+<tr>
+<td>T17 持久化</td>
+<td>A13</td>
+<td>创建消息、引用、分支、助手历史和草稿；刷新页面，再停止并重启服务。</td>
+<td>数据、配置和阅读状态按说明恢复；正式数据不依赖页面内存。</td>
+</tr>
+<tr>
+<td>T18 停止和重试</td>
+<td>A13、F12</td>
+<td>流式回答中停止；模拟断网或服务重启；重试原请求；连续点击发送。</td>
+<td>部分回答保留并标记中止或失败；无虚假的完成状态；幂等处理不重复保存用户消息。</td>
+</tr>
+<tr>
+<td>T19 自动摘要</td>
+<td>A15</td>
+<td>让长分支接近预算上限；观察摘要提示；查看摘要与原文；继续提问并检查请求。</td>
+<td>使用会话模型摘要；保留原文和锚点；只压缩分支可见历史；摘要和最终请求均符合预算，并记录调用用量。</td>
+</tr>
+<tr>
+<td>T20 摘要失败</td>
+<td>A15</td>
+<td>在摘要调用中制造失败后重试；在已有摘要后创建新分支。</td>
+<td>不丢原文或草稿，不发送超限请求；重试可恢复；分支快照及摘要版本准确。</td>
+</tr>
+<tr>
+<td>T21 备份与凭据</td>
+<td>F13</td>
+<td>导出测试数据；在干净测试库恢复；检查导出、配置响应和日志。</td>
+<td>会话树、消息、锚点与来源可恢复；导出和普通日志无明文密钥；密钥需单独配置。</td>
+</tr>
+</tbody>
+</table>
+<h2>4. 结果记录与通过标准</h2>
+<p>执行时逐项填写：用例编号、验证类别、构建版本、环境、实际结果、证据路径、执行时间及缺陷编号。状态只使用「未执行 / 通过 / 失败 / 阻塞 / 不适用」；缺少账户或网络不可达标为阻塞，不能标为通过。</p>
+<p>1.0 核心用例通过后才可以声明该范围可用。Provider、独立搜索和来源引用必须有真实联调证据；纯 UI 检查不作替代。实施建议若调整，应同步更新产品说明书与本测试说明，不默默跳过用例。</p>
+<p>当前结论：<strong>已整理测试说明，尚无正式应用测试通过结论。</strong> 原型导出的页面与链接检查仅证明归档材料可查看。</p>
+<p><a href="TEST_SPEC.md">查看 Markdown 源文档</a></p></main></body></html>

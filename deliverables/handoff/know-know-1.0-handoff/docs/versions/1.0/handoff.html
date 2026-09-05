@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Know Know 1.0 · 开发交接</title><style>
+:root { color-scheme: light dark; --bg: light-dark(#f6f7f4,#171d1a); --text: light-dark(#273b32,#e1e9e3); --line: light-dark(#dfe5dd,#37433b); --accent: light-dark(#356750,#a2cbb2); }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.8 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif; }
+header { border-bottom: 1px solid var(--line); padding: 20px max(24px,calc((100% - 1100px)/2)); }
+nav { display: flex; flex-wrap: wrap; gap: 10px 24px; margin-top: 8px; }
+a { color: var(--accent); text-underline-offset: 4px; }
+main { max-width: 1150px; padding: 32px 24px 80px; margin: auto; overflow-wrap: anywhere; }
+h1,h2,h3 { line-height: 1.4; } h1 { font-size: 30px; } h2 { margin-top: 40px; font-size: 23px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 24px 0; }
+th,td { text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); padding: 12px 10px; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; padding: 20px; border: 1px solid var(--line); }
+code { font-size: .9em; } li { margin-bottom: 8px; }
+.notice { border-left: 3px solid var(--accent); padding-left: 16px; }
+.entries { list-style: none; padding: 0; } .entries li { padding: 18px 0; border-bottom: 1px solid var(--line); }
+@media (max-width: 600px) { main { padding: 20px 16px 50px; } h1 { font-size: 25px; } table { display: block; overflow-x: auto; } }
+@media print { header { display: none; } body { color: #111; background: #fff; } main { max-width: none; } }
+</style></head>
+<body><header><strong>Know Know · 1.0 版本评审</strong><nav aria-label="评审资料"><a href="index.html">版本首页</a><a href="product.html">产品说明</a><a href="handoff.html">开发交接</a><a href="interaction.html">交互说明</a><a href="prototype.html">交互原型 ↗</a><a href="test.html">测试说明</a><a href="technical.html">技术方案</a><a href="../1.1/index.html">1.1 规划</a></nav></header><main><h1>Know Know 1.0 开发与测试交接说明</h1>
+<p>交接版本：1.0 · 2026-09-05<br />
+面向：承接 1.0 实现、联调、测试及交付的开发团队。</p>
+<h2>1. 接手任务与当前状态</h2>
+<p>请根据本交接包，将 Know Know 的需求与交互原型实现为可在用户本机通过浏览器访问的应用，并完成测试和交付。</p>
+<p><strong>1.0 后续开发和测试由接手团队负责。</strong> 本交接包提供产品定义、已确认的交互基线、建议技术方案和测试设计，不包含正式应用代码或测试通过结论。</p>
+<table>
+<thead>
+<tr>
+<th>已提供</th>
+<th>尚需接手团队完成</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>产品说明、可点击 HTML 交互原型</td>
+<td>正式前端与本地应用服务</td>
+</tr>
+<tr>
+<td>数据模型、上下文、联网与存储的技术建议</td>
+<td>数据库、迁移、密钥存储、真实模型与搜索适配</td>
+</tr>
+<tr>
+<td>21 项测试用例与验收目标</td>
+<td>自动化测试、真实 API 联调、测试执行及缺陷修复</td>
+</tr>
+<tr>
+<td>1.1 多用户登录规划</td>
+<td>1.0 安装启动说明、备份恢复、发布材料</td>
+</tr>
+</tbody>
+</table>
+<p>原型回答是预置示例，状态保存在页面内存中；联网、思考、模型配置的演示控件不代表真实功能已经接通。静态页面服务也不是正式应用后端。</p>
+<h2>2. 文档清单与阅读顺序</h2>
+<p>浏览器统一入口：<a href="./index.html">1.0 评审首页</a>。</p>
+<table>
+<thead>
+<tr>
+<th>顺序</th>
+<th>材料</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><a href="./handoff.html">本交接说明</a></td>
+<td>理解承接边界、工程任务和交付要求。</td>
+</tr>
+<tr>
+<td>2</td>
+<td><a href="./product.html">产品说明书 1.0</a></td>
+<td>功能定义、已确认规则、实施建议及验收目标。</td>
+</tr>
+<tr>
+<td>3</td>
+<td><a href="./interaction.html">交互实现说明 1.0</a> + <a href="./prototype.html">可点击原型</a></td>
+<td>对照状态与交互实现界面。</td>
+</tr>
+<tr>
+<td>4</td>
+<td><a href="./technical.html">技术方案 1.0</a></td>
+<td>数据模型、上下文、搜索、索引、运行状态及存储建议。</td>
+</tr>
+<tr>
+<td>5</td>
+<td><a href="./test.html">测试说明 1.0</a></td>
+<td>编制和执行测试，记录证据及阻塞项。</td>
+</tr>
+<tr>
+<td>6</td>
+<td><a href="../1.1/product.html">1.1 规划</a></td>
+<td>理解后续边界，避免把登录模块提前纳入 1.0。</td>
+</tr>
+</tbody>
+</table>
+<p>Markdown 是文档维护源，配套 HTML 是便于浏览的阅读版。<code>prototype.html</code> 可独立打开；<code>prototype.fragment.html</code> 是原型源片段。原型为 HTML，不是 Axure <code>.rp</code> 工程。</p>
+<p>发生歧义时，以产品说明书中的<strong>已确认规则</strong>为功能基线；交互原型作为视觉和操作参考；技术文档中的建议由接手团队评估落地。示例文案、演示模型名和原型内部写法不是正式实现约束。文档与原型如有实质冲突，记录差异交产品负责人确认，不根据演示代码自行缩减范围。</p>
+<h2>3. 1.0 范围与不可改变的产品规则</h2>
+<ol>
+<li><strong>个人本机版，无登录。</strong> 通过浏览器访问本地服务，不要求用户每次会话选择工程目录；不包含注册、登录、多用户或云同步。多用户登录归属 1.1。</li>
+<li><strong>会话管理。</strong> 可新建、切换、重命名和删除；每个会话初始只有一张主卡片。</li>
+<li><strong>引用与探索是两种操作。</strong> 选中 AI 回答里的文本，浮层呈现两个图标；引用留在当前卡片，探索创建独立子卡片。</li>
+<li><strong>分支具有来源和背景。</strong> 保存原文选区及来源消息，继承分叉时上下文；后来的父消息和兄弟分支不得自动进入子分支。</li>
+<li><strong>前景卡片水平。</strong> 当前卡片清晰、水平；背景卡片逐层逆时针约 4–5° 旋转并模糊。中间展示当前祖先路径。</li>
+<li><strong>右侧是纯节点树。</strong> 默认只显示节点与连线，Hover 才显示标题，点击跳到卡片；键盘聚焦提供等价信息。</li>
+<li><strong>一个会话固定一个 Provider 和模型。</strong> 新建继承全局默认，首条消息前可切换，开始聊天后锁定；主卡片、全部分支和知识助手一致。联网与思考设置仍可调整，影响后续请求。</li>
+<li><strong>真实联网。</strong> 首版必须提供独立搜索服务，供无原生搜索能力的兼容模型使用；搜索资料交回当前会话模型回答。不能只添加提示词或显示动画来代替搜索。</li>
+<li><strong>知识助手是持续自然语言对话。</strong> 在当前会话全部分支中检索、比较和总结，保留追问历史，回答可定位到原消息；不是搜索弹框，也不新增探索树节点。</li>
+<li><strong>持久保存及自动摘要。</strong> 刷新和服务重启后恢复内容；接近上下文上限时自动摘要并提示，可回看完整原文。</li>
+</ol>
+<p>1.0 不包含跨会话全局知识库界面、附件导入、多媒体、分支合并、团队协作或收费订阅。不可把“为了未来扩展”作为提前实现登录模块的理由。</p>
+<h2>4. 接手团队负责的工程内容</h2>
+<table>
+<thead>
+<tr>
+<th>工作包</th>
+<th>实现内容</th>
+<th>对应验证</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>W01 本机应用与数据</td>
+<td>前端、本地服务、启动配置、数据库迁移、数据目录、配置与草稿保存</td>
+<td>T01、T10、T17、T21</td>
+</tr>
+<tr>
+<td>W02 核心交互</td>
+<td>选区锚点、双操作浮层、来源链接、层叠卡片、树导航、草稿与阅读位置</td>
+<td>T04–T09</td>
+</tr>
+<tr>
+<td>W03 分支和运行状态</td>
+<td>不可变上下文快照、模型锁定、流式输出、停止、失败与幂等重试</td>
+<td>T02、T03、T07、T18</td>
+</tr>
+<tr>
+<td>W04 模型接入</td>
+<td>OpenAI、DeepSeek、自定义兼容接口；真实连接测试和能力识别</td>
+<td>T11、T15</td>
+</tr>
+<tr>
+<td>W05 联网</td>
+<td>独立搜索配置、检索与资料提取、查询计划、引用保存、异常处理；原生搜索可选</td>
+<td>T12–T14</td>
+</tr>
+<tr>
+<td>W06 会话知识助手</td>
+<td>当前会话候选检索、自然语言追问、证据回答与准确导航</td>
+<td>T16</td>
+</tr>
+<tr>
+<td>W07 长上下文</td>
+<td>预算计算、自动摘要、状态提示、原文回溯、失败恢复</td>
+<td>T19、T20</td>
+</tr>
+<tr>
+<td>W08 测试与发布</td>
+<td>单元与集成测试、浏览器流程、真实联调、启动说明、恢复验证、发布记录</td>
+<td>全部用例及交付检查</td>
+</tr>
+</tbody>
+</table>
+<p>接手团队据此拆分任务、估算工作量和安排里程碑。交接资料不承诺开发周期或成本。可以分阶段实现，但最终 1.0 不能停留在可点击演示。</p>
+<h2>5. 技术方案的约束与可调整部分</h2>
+<p>建议组合为 React + TypeScript + Vite、Node.js 本地服务、SQLite、SSE、SVG 树及 CSS 卡片动画。依赖版本、具体路由层、数据库驱动、测试框架由接手团队选定并锁定；允许提出等效替代，记录理由并保证需求与可维护性。</p>
+<p>以下结果必须得到保证：</p>
+<ul>
+<li>消息、卡片、选区、引用、快照、运行、来源、助手历史和配置建立稳定 ID 关系，不能只保存拼接后的聊天文本。</li>
+<li>分叉快照可重建，Markdown 渲染后的选区能映射到稳定来源；中文、重复词和跨行选取都要验证。</li>
+<li>普通卡片只读取该路径的上下文；知识助手可查整个当前会话，但检索必须在数据层限定会话 ID。</li>
+<li>API Key 由本地服务管理，不进入浏览器持久存储、前端包、日志或业务数据导出。macOS 系统凭据存储为建议方案。</li>
+<li>本地服务只监听回环地址，并校验请求来源与本地访问授权；这属于本地服务保护，不是用户登录模块。</li>
+<li>Provider 与搜索服务分开适配。模型、思考、原生搜索和工具调用的支持情况按实际接口验证，不能假定所有“兼容接口”能力相同。</li>
+<li>自动模式允许模型选择是否搜索；强制模式由执行链路保证实际检索。资料不足和调用失败要如实呈现；不伪造来源或隐式换模型。</li>
+<li>自动摘要使用会话模型，保留原文与摘要来源范围、版本和用量；不跨分支混入资料。预算必须包括指令、资料及输出空间。</li>
+<li>运行中保存请求配置快照和明确状态。刷新、取消、断流、重启及重试不能产生假完成或重复用户消息。</li>
+</ul>
+<p>技术文档中的 API 能力资料是方案编写时的参考。接手团队实施时应重新核对官方文档并用实际账户验证，特别是原生搜索、推理参数、模型上下文额度和收费行为。</p>
+<h2>6. 仍需明确的事项及责任人</h2>
+<table>
+<thead>
+<tr>
+<th>事项</th>
+<th>当前状态</th>
+<th>接手团队应做什么</th>
+<th>由谁定案</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>独立搜索供应商</td>
+<td>必须接入，但未选定服务</td>
+<td>比较中文结果、正文能力、可达性、价格和配置要求，提交推荐</td>
+<td>产品负责人确定账户与费用；团队完成接入</td>
+</tr>
+<tr>
+<td>真实测试账户与模型</td>
+<td>未提供给交接包</td>
+<td>列出所需连接与能力，让用户在本地填写凭据</td>
+<td>产品负责人提供或授权测试资源</td>
+</tr>
+<tr>
+<td>实现库与版本</td>
+<td>技术文档为建议</td>
+<td>选定、验证、锁版本并记录替代方案</td>
+<td>接手团队</td>
+</tr>
+<tr>
+<td>分叉边界细节</td>
+<td>“源回答截至选区末尾”等为实施建议</td>
+<td>先按文档提出可验证规则；若调整，说明对回答背景的影响</td>
+<td>涉及知识语义的变化由产品负责人确认</td>
+</tr>
+<tr>
+<td>锁定、回收区和恢复细节</td>
+<td>文档有实施建议与对应测试</td>
+<td>细化状态机，保持规则与测试一致；任何删减需说明</td>
+<td>可逆工程细节由团队定；产品行为变化由产品负责人确认</td>
+</tr>
+<tr>
+<td>1.1 认证与部署</td>
+<td>后续版本待细化</td>
+<td>本轮仅理解边界，不开发</td>
+<td>1.1 另行评审</td>
+</tr>
+</tbody>
+</table>
+<p>本机使用、独立搜索、自动摘要、1.0 无登录及 1.1 多用户登录均已确认，无须重新发起同样的需求选择。新账户、付费服务和产品范围变化交产品负责人决定。</p>
+<h2>7. 测试与验收须知</h2>
+<p>测试团队以 <a href="./test.html">测试说明 1.0</a> 的 T01–T21 为基线，结合正式实现补充自动化用例、边界数据和回归覆盖。该说明不是现成测试代码或已执行报告。</p>
+<p>最低真实联调证据包括：</p>
+<ol>
+<li>OpenAI 与 DeepSeek 各完成真实问答，锁定和能力映射正确。</li>
+<li>至少一个没有原生搜索能力的兼容模型通过独立搜索获得资料、回答并提供可追溯引用。</li>
+<li>搜索关闭、自动、强制及失败分支与实际调用记录一致。</li>
+<li>知识助手连续追问有真实会话来源，不跨会话召回。</li>
+<li>长上下文触发真实摘要，提示和原文回溯正确；模拟测试覆盖预算和失败路径。</li>
+<li>刷新、服务重启、停止、重试和备份恢复的结果符合说明。</li>
+</ol>
+<p>每项结果标明构建版本、环境、验证类别、实际结果、证据、时间与缺陷编号。凭据或网络不足标为阻塞，不能算通过；原型检查、模拟集成与真实联调分开报告。不得用模型“回答看起来正确”代替请求上下文和来源数据的检查。</p>
+<h2>8. 接手团队最终需提交的材料</h2>
+<ul>
+<li>正式应用源码、依赖锁文件、数据库结构与迁移、配置示例；不含真实密钥。</li>
+<li>macOS 本机安装、启动、停止和升级说明，明确版本要求、服务地址、数据目录及故障排查方法。</li>
+<li>Provider、独立搜索、思考能力和真实可用模型的验证记录。</li>
+<li>自动化测试代码与执行方式，T01–T21 结果及证据，已知问题和未通过项。</li>
+<li>数据备份、导出、恢复说明及验证记录。</li>
+<li>最终技术决策记录、与当前产品基线的差异说明，以及 1.0 发布说明。</li>
+</ul>
+<p>材料交齐并不自动等于验收通过。产品负责人根据已确认范围、可运行交付和测试证据完成验收；尚未接通的功能、未执行的测试及外部依赖要明确列出。</p>
+<h2>9. 可直接转发给接手团队的任务说明</h2>
+<blockquote>
+<p>请承接 Know Know 1.0 的开发与测试。项目是个人本机使用、浏览器访问的知识分支对话应用，1.0 不包含登录模块。请先阅读本交接说明，再对照产品说明书、交互实现说明、HTML 原型、技术方案及 21 项测试用例拆解任务。实现真实模型调用、独立搜索、分支上下文、会话知识助手、本地持久化和自动摘要，并提交可运行源码、启动说明与测试证据。原型仅用于确认交互，不能当成已实现后端。框架细节由团队评估；搜索服务费用、所需账户及产品行为变化与产品负责人确认。多用户登录属于 1.1，不纳入本轮。请先反馈任务拆分、估算、技术差异及外部依赖，再按团队流程组织实施。</p>
+</blockquote>
+<p><a href="DEVELOPMENT_HANDOFF.md">查看 Markdown 源文档</a></p></main></body></html>

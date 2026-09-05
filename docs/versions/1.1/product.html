@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Know Know 1.1 · 产品说明</title><style>
+:root { color-scheme: light dark; --bg: light-dark(#f6f7f4,#171d1a); --text: light-dark(#273b32,#e1e9e3); --line: light-dark(#dfe5dd,#37433b); --accent: light-dark(#356750,#a2cbb2); }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.8 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif; }
+header { border-bottom: 1px solid var(--line); padding: 20px max(24px,calc((100% - 1100px)/2)); }
+nav { display: flex; flex-wrap: wrap; gap: 10px 24px; margin-top: 8px; }
+a { color: var(--accent); text-underline-offset: 4px; }
+main { max-width: 1150px; padding: 32px 24px 80px; margin: auto; overflow-wrap: anywhere; }
+h1,h2,h3 { line-height: 1.4; } h1 { font-size: 30px; } h2 { margin-top: 40px; font-size: 23px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 24px 0; }
+th,td { text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); padding: 12px 10px; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; padding: 20px; border: 1px solid var(--line); }
+code { font-size: .9em; } li { margin-bottom: 8px; }
+.notice { border-left: 3px solid var(--accent); padding-left: 16px; }
+.entries { list-style: none; padding: 0; } .entries li { padding: 18px 0; border-bottom: 1px solid var(--line); }
+@media (max-width: 600px) { main { padding: 20px 16px 50px; } h1 { font-size: 25px; } table { display: block; overflow-x: auto; } }
+@media print { header { display: none; } body { color: #111; background: #fff; } main { max-width: none; } }
+</style></head>
+<body><header><strong>Know Know · 1.1 版本评审</strong><nav aria-label="评审资料"><a href="index.html">版本首页</a><a href="product.html">产品说明</a><a href="../1.0/index.html">返回 1.0</a></nav></header><main><h1>Know Know 产品规划 1.1</h1>
+<p>版本：1.1 · 2026-09-05<br />
+状态：下一版本规划，尚未开发；不改变 <a href="../1.0/product.html">1.0</a> 无登录的范围。</p>
+<h2>1. 版本目标</h2>
+<p><strong>已确认：1.1 加入多用户登录模块。</strong> 在继承 1.0 卡片、分支、知识助手、模型配置、联网和摘要能力的基础上，让不同用户登录各自的知识空间。</p>
+<p>多用户登录不自动意味着团队共享、协同编辑、云同步、计费订阅或必须公网部署。这些不列为本次已确认的 1.1 功能。</p>
+<h2>2. 多用户模块范围</h2>
+<p>以下为实现多用户登录所需的规划规则；具体认证方式与部署方式在 1.1 开发前确定。</p>
+<table>
+<thead>
+<tr>
+<th>编号</th>
+<th>功能</th>
+<th>规划行为</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>U01</td>
+<td>登录</td>
+<td>用户完成认证后进入自己的空间；未登录时不能访问受保护内容。</td>
+</tr>
+<tr>
+<td>U02</td>
+<td>退出</td>
+<td>结束登录会话，清理当前浏览器中的用户数据状态；旧会话凭证不可继续访问。</td>
+</tr>
+<tr>
+<td>U03</td>
+<td>登录状态管理</td>
+<td>正常刷新按有效会话恢复；过期或失效时提示重新登录，避免将待发送内容提交到其他账户。</td>
+</tr>
+<tr>
+<td>U04</td>
+<td>用户数据隔离</td>
+<td>会话、卡片、分支、消息、知识索引、助手历史、草稿和导出按用户隔离；服务端校验访问权。</td>
+</tr>
+<tr>
+<td>U05</td>
+<td>用户配置隔离</td>
+<td>默认 Provider、模型配置、搜索服务和凭据按用户管理；不把一个用户的 Key 暴露给另一个用户。</td>
+</tr>
+<tr>
+<td>U06</td>
+<td>用户身份呈现</td>
+<td>界面明确当前用户，并提供退出入口；再次登录另一个用户时清除前一个用户的界面缓存。</td>
+</tr>
+</tbody>
+</table>
+<p>登录不限于前端页面：请求接口、流式事件、运行状态、引用跳转、备份和知识检索都要遵循同一用户边界。会话模型锁定规则继续保留。</p>
+<h2>3. 从 1.0 升级</h2>
+<p><strong>实施建议：</strong> 升级前备份本地数据库。原有无账号数据保留，由本机数据所有者明确关联到一个账户；迁移完成前不可默认向所有新用户开放。迁移验证消息、分支、来源与配置引用，提供可恢复路径。</p>
+<p>1.0 的本机系统凭据方案不能未经评估就作为在线多用户凭据方案。1.1 根据部署方式重新确定凭据加密、访问权限和恢复方式。</p>
+<h2>4. 1.1 开发前需要明确的事项</h2>
+<ul>
+<li><strong>部署形态：</strong> 继续在个人机器或局域网运行，还是部署到公网服务器。</li>
+<li><strong>认证方式：</strong> 本地账户、邮箱验证码或第三方身份服务等具体选型。</li>
+<li><strong>账户来源：</strong> 自助注册、邀请制或管理员创建；登录需求不等于已决定开放注册。</li>
+<li><strong>凭据归属：</strong> 建议每个用户自行配置模型和搜索凭据；如使用共用额度，另行明确配额、费用和管理权限。</li>
+<li><strong>历史数据归属：</strong> 明确哪个账户接收 1.0 本机数据，以及采用哪种迁移确认方式。</li>
+</ul>
+<p>工程方负责给出具体方案与成本；这些事项在 1.1 细化时讨论，不阻塞 1.0。</p>
+<h2>5. 1.1 测试规划</h2>
+<p>以下为未来测试目标，均未执行；认证选型完成后补齐具体步骤。</p>
+<table>
+<thead>
+<tr>
+<th>用例</th>
+<th>验收目标</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>UAT01 登录</td>
+<td>有效身份可进入对应空间，无效身份无法访问受保护内容。</td>
+</tr>
+<tr>
+<td>UAT02 退出与过期</td>
+<td>退出后旧凭证失效；会话过期提示重新登录，不继续执行未授权请求。</td>
+</tr>
+<tr>
+<td>UAT03 用户隔离</td>
+<td>用户甲不能通过更换会话、卡片、运行或引用 ID 读取或修改用户乙的数据。</td>
+</tr>
+<tr>
+<td>UAT04 知识与配置隔离</td>
+<td>检索、模型与搜索设置、密钥、导出和流式事件不跨用户泄漏。</td>
+</tr>
+<tr>
+<td>UAT05 切换账户</td>
+<td>同一浏览器退出甲再登录乙，甲的消息、草稿及缓存不继续显示。</td>
+</tr>
+<tr>
+<td>UAT06 升级迁移</td>
+<td>1.0 数据仅迁移到指定账户，记录和关系完整，失败可恢复。</td>
+</tr>
+<tr>
+<td>UAT07 功能回归</td>
+<td>两个用户各自使用 1.0 的问答、引用、分支、搜索、摘要和持久化能力，相互不干扰。</td>
+</tr>
+</tbody>
+</table>
+<p>1.1 当前只有版本规划，不包含登录 UI 原型或认证实现。现有交互原型归属 1.0。</p>
+<p><a href="PRODUCT_SPEC.md">查看 Markdown 源文档</a></p></main></body></html>

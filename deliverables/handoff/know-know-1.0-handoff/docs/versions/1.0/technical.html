@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Know Know 1.0 · 技术方案</title><style>
+:root { color-scheme: light dark; --bg: light-dark(#f6f7f4,#171d1a); --text: light-dark(#273b32,#e1e9e3); --line: light-dark(#dfe5dd,#37433b); --accent: light-dark(#356750,#a2cbb2); }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.8 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif; }
+header { border-bottom: 1px solid var(--line); padding: 20px max(24px,calc((100% - 1100px)/2)); }
+nav { display: flex; flex-wrap: wrap; gap: 10px 24px; margin-top: 8px; }
+a { color: var(--accent); text-underline-offset: 4px; }
+main { max-width: 1150px; padding: 32px 24px 80px; margin: auto; overflow-wrap: anywhere; }
+h1,h2,h3 { line-height: 1.4; } h1 { font-size: 30px; } h2 { margin-top: 40px; font-size: 23px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 24px 0; }
+th,td { text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); padding: 12px 10px; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; padding: 20px; border: 1px solid var(--line); }
+code { font-size: .9em; } li { margin-bottom: 8px; }
+.notice { border-left: 3px solid var(--accent); padding-left: 16px; }
+.entries { list-style: none; padding: 0; } .entries li { padding: 18px 0; border-bottom: 1px solid var(--line); }
+@media (max-width: 600px) { main { padding: 20px 16px 50px; } h1 { font-size: 25px; } table { display: block; overflow-x: auto; } }
+@media print { header { display: none; } body { color: #111; background: #fff; } main { max-width: none; } }
+</style></head>
+<body><header><strong>Know Know · 1.0 版本评审</strong><nav aria-label="评审资料"><a href="index.html">版本首页</a><a href="product.html">产品说明</a><a href="handoff.html">开发交接</a><a href="interaction.html">交互说明</a><a href="prototype.html">交互原型 ↗</a><a href="test.html">测试说明</a><a href="technical.html">技术方案</a><a href="../1.1/index.html">1.1 规划</a></nav></header><main><h1>Know Know 技术方案与决策清单</h1>
+<p>版本：1.0 · 2026-09-05<br />
+对应需求：<a href="./product.html">产品功能说明书</a>。本文是拟实施方案，不是已完成实现的说明。</p>
+<p>1.0 的开发、联调与测试由接手团队承担，职责和交付要求见 <a href="./handoff.html">开发与测试交接说明</a>。本文中的“开发方”指接手团队；技术组合为建议，团队可评估等效实现并记录决策。</p>
+<h2>1. 已确定的方向</h2>
+<p>用户已选择：<strong>第一版个人本机使用，通过浏览器访问。</strong></p>
+<p>因此建议采用浏览器前端、本地应用服务、本地数据库的结构。1.0 针对用户当前的 macOS 环境，不搭建登录、云数据库、多租户或公网部署。多用户登录与用户数据隔离在 <a href="../1.1/product.html">1.1 规划</a> 中定义，不提前加入 1.0。跨平台与桌面安装包以后另行评估。</p>
+<pre><code class="language-mermaid">flowchart LR
+    UI[浏览器：卡片 / 分支树 / 知识助手] --&gt; API[本地应用服务]
+    API --&gt; DB[(本地 SQLite)]
+    API --&gt; SECRET[系统凭据存储]
+    API --&gt; ADAPTER[Provider 适配器]
+    ADAPTER --&gt; OPENAI[OpenAI API]
+    ADAPTER --&gt; DEEPSEEK[DeepSeek API]
+    ADAPTER --&gt; CUSTOM[兼容接口]
+    OPENAI --&gt; SEARCH1[服务商原生搜索]
+    DEEPSEEK --&gt; SEARCH2[服务商原生搜索]
+    API --&gt; SEARCH3[独立搜索服务：首版必需]
+</code></pre>
+<p>模型、搜索提供商会收到请求所需的内容。所谓本地保存，指应用的数据主副本在本机，不意味着请求不会离开设备。</p>
+<h2>2. 哪些需要用户拍板</h2>
+<p>判断原则：影响使用方式、额外账户或费用、知识完整性和体验的取舍由用户决定；实现库、目录结构、接口组织及可逆的工程细节由开发方确定。</p>
+<table>
+<thead>
+<tr>
+<th>决策</th>
+<th>当前状态</th>
+<th>建议</th>
+<th>对实现的影响</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>D01 使用方式</td>
+<td><strong>已确认：本机个人版</strong></td>
+<td>浏览器访问本地服务</td>
+<td>不做账号、云同步和多人权限。</td>
+</tr>
+<tr>
+<td>D02 联网覆盖范围</td>
+<td><strong>已确认：首版增加独立搜索服务</strong></td>
+<td>独立搜索作为兼容模型的通用路径；支持时也可接入原生搜索</td>
+<td>增加搜索连接配置、工具执行、资料读取与来源保存；回答仍使用会话绑定模型。</td>
+</tr>
+<tr>
+<td>D03 超长探索的上下文处理</td>
+<td><strong>已确认：自动摘要并提示，可回看原文</strong></td>
+<td>接近模型上限时自动摘要较早内容，原文仍完整保存在本机，可查看使用了哪些摘要</td>
+<td>用户接受额外调用成本及可能遗漏细节；摘要与源消息范围、版本关联，不覆盖历史原文。</td>
+</tr>
+<tr>
+<td>D04 真实联调所用账户与模型</td>
+<td>联调前需要用户提供</td>
+<td>用户在本地设置页填入自己的 API Key，选择可用模型；先验证其常用 Provider</td>
+<td>不需要把密钥发到聊天中。没有可用账户不能宣称真实模型或联网已验收。</td>
+</tr>
+</tbody>
+</table>
+<p>D01、D02、D03 均已确定。独立搜索服务的具体供应商由开发方评估后推荐，涉及新增账户和费用时，再由用户选择并在本机配置凭据。当前未选定或购买搜索服务。</p>
+<p>不建议此时把月度费用上限、云部署或订阅计费作为新增首版工程；如用户有明确预算，之后设置相应限制。先记录实际 token 和工具用量，并为单次任务设置有界的输出、时长和工具调用次数。</p>
+<h2>3. 开发方可直接确定的技术选型</h2>
+<p>以下是拟采用方案，不需要用户逐项选择品牌或框架。</p>
+<table>
+<thead>
+<tr>
+<th>部分</th>
+<th>拟采用方案</th>
+<th>原因</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>前端</td>
+<td>React + TypeScript + Vite</td>
+<td>将卡片、选区工具栏、知识助手拆为组件；方便本地开发与构建。</td>
+</tr>
+<tr>
+<td>本地服务</td>
+<td>Node.js + TypeScript，轻量 HTTP 路由层</td>
+<td>统一管理密钥、模型请求、上下文、搜索适配和存储。</td>
+</tr>
+<tr>
+<td>联网编排</td>
+<td>独立 SearchAdapter + 会话模型回答；原生搜索可选</td>
+<td>将搜索能力与模型服务解耦，让兼容聊天模型也能使用检索资料。</td>
+</tr>
+<tr>
+<td>持久化</td>
+<td>SQLite，显式迁移</td>
+<td>首版单机无需用户部署独立数据库服务。</td>
+</tr>
+<tr>
+<td>返回流</td>
+<td>POST 创建运行 + SSE 接收状态和文本；独立停止接口</td>
+<td>文本、来源和执行状态可以增量呈现。</td>
+</tr>
+<tr>
+<td>分支图</td>
+<td>SVG 曲线与节点、HTML 可交互热点</td>
+<td>与当前纯节点树的交互一致，不必引入完整画布编辑器。</td>
+</tr>
+<tr>
+<td>卡片动画</td>
+<td>CSS transform / blur，必要时补局部动画库</td>
+<td>最上层保持水平，动画不承担数据状态。</td>
+</tr>
+<tr>
+<td>索引</td>
+<td>SQLite 全文候选 + 中文词项处理 + 同一会话模型的查询理解与证据整理</td>
+<td>先完成可靠的会话内检索，暂不要求用户额外配置向量服务。</td>
+</tr>
+<tr>
+<td>密钥</td>
+<td>macOS 系统凭据存储，数据库只存引用与非敏感连接信息</td>
+<td>避免把 API Key 保存到前端或导出文件。具体桥接库实施时验证。</td>
+</tr>
+<tr>
+<td>验证</td>
+<td>单元测试覆盖上下文与状态机；浏览器测试覆盖两类选词操作与树导航；真实 API 冒烟测试</td>
+<td>将 UI 演示、模拟集成、真实联调明确分开。</td>
+</tr>
+</tbody>
+</table>
+<p>React 的组件与交互机制、Vite 的构建入口见 <a href="https://react.dev/learn">React 官方文档</a> 和 <a href="https://vite.dev/guide/">Vite 官方文档</a>。框架组合是本项目的工程判断，不是文档对本产品的推荐。</p>
+<p>Node.js 运行时与数据库驱动版本在实施时选定并锁定。当前 Node 官方文档将 <code>node:sqlite</code> 标为 release candidate，因此不因为它是内置模块就跳过稳定性验证；优先选择与已定运行时匹配、经过验证的驱动。<a href="https://nodejs.org/api/sqlite.html">Node SQLite 文档</a></p>
+<h2>4. 源码和用户数据放在哪里</h2>
+<p>拟议源码组织：</p>
+<pre><code class="language-text">know-know/
+  docs/                 产品说明、技术决策
+  src/client/           浏览器界面
+  src/server/           本地 API、运行管理、Provider 适配
+  src/shared/           共用数据类型与校验
+  migrations/           数据库迁移
+  tests/                关键流程验证
+</code></pre>
+<p>拟议 macOS 默认数据目录：</p>
+<pre><code class="language-text">~/Library/Application Support/KnowKnow/
+  know-know.sqlite      消息、树、引用、快照、设置、知识索引
+  backups/              可恢复备份
+  exports/              用户主动导出的内容
+  logs/                 脱敏后的运行日志
+</code></pre>
+<p>允许通过 <code>KNOW_KNOW_DATA_DIR</code> 配置其他位置。数据库和密钥不写入 Git 工程。密钥由系统凭据存储管理，不放到上述导出目录。</p>
+<p>以上目录是方案，本轮尚未创建数据库或保存任何密钥。数据导出优先提供保留结构的 JSON；Markdown 可用于阅读，但不能替代包含分支、锚点与配置版本的结构化备份。运行中备份使用数据库备份机制，避免直接复制正在写入的单个数据库文件。</p>
+<h2>5. 最关键的数据模型</h2>
+<table>
+<thead>
+<tr>
+<th>实体</th>
+<th>关键字段与约束</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ProviderConfig</td>
+<td>类型、名称、默认模型、凭据引用、连接配置版本、能力记录。</td>
+</tr>
+<tr>
+<td>SearchConfig</td>
+<td>搜索服务类型、凭据引用、参数与配置版本；不复用聊天 Provider 的密钥。</td>
+</tr>
+<tr>
+<td>Conversation</td>
+<td>标题、Provider 绑定、模型 ID、锁定时间、当前联网/思考设置、删除状态。</td>
+</tr>
+<tr>
+<td>Card</td>
+<td>会话 ID、父卡片 ID、标题、源锚点 ID、初始上下文快照 ID。</td>
+</tr>
+<tr>
+<td>Message</td>
+<td>卡片 ID、角色、内容、状态、消息顺序、运行 ID；完成内容作为不可变来源。</td>
+</tr>
+<tr>
+<td>SelectionAnchor</td>
+<td>源消息及版本、精确选文、位置、邻近文本；引用与探索共用。</td>
+</tr>
+<tr>
+<td>MessageQuote</td>
+<td>用户消息与来源锚点的关联；不是把引用混进一段无来源的字符串。</td>
+</tr>
+<tr>
+<td>ContextSnapshot</td>
+<td>有序消息引用、分叉边界、摘要版本；可重复构造当时背景。</td>
+</tr>
+<tr>
+<td>Run</td>
+<td>请求用途、状态、发送时模型和能力快照、用量、错误、幂等键。</td>
+</tr>
+<tr>
+<td>Source / Citation</td>
+<td>URL、标题、检索时间、工具运行、可用证据片段及回答引用位置。</td>
+</tr>
+<tr>
+<td>KnowledgeTopic</td>
+<td>标题、别名和关联卡片；同名只提示候选，不自动合并语义。</td>
+</tr>
+<tr>
+<td>KnowledgeChunk</td>
+<td>会话 ID、消息 ID、文本片段、来源位置、索引版本。</td>
+</tr>
+<tr>
+<td>KnowledgeAssistantMessage</td>
+<td>会话级助手历史和证据引用，与探索卡片消息分开。</td>
+</tr>
+<tr>
+<td>Draft / ViewState</td>
+<td>每卡片输入草稿、待发送引用、阅读位置、当前节点。</td>
+</tr>
+</tbody>
+</table>
+<p>父卡片必须属于同一会话，创建父子关系时检查无环。跨会话关联不是首版隐式能力。</p>
+<h3>5.1 Provider 锁定不能被配置编辑绕开</h3>
+<p>会话首次发起处理时保存 Provider 类型、连接配置版本、模型 ID 的绑定。随后修改全局配置，不应让既有会话静默使用另一模型或接口。密钥轮换仍可指向同一原连接，模型失效则保留历史并给出错误，不擅自换模型。</p>
+<h3>5.2 选区必须能回到原文</h3>
+<p>Markdown 渲染后的 DOM 位置不能直接当作数据库锚点。将渲染内容映射到消息中的规范文本区间，保存选文与邻近文本用于校验。首次实现覆盖中文、跨行和重复术语，后续改动消息内容必须生成版本而非破坏旧锚点。</p>
+<h2>6. 分支上下文与长会话</h2>
+<p>普通提问的输入由该卡片的初始快照、该卡片后续消息和本轮问题构成。引用是带来源的本轮附加内容。新分支从父卡片当前已知上下文截取到明确的分叉位置，形成新快照。</p>
+<p>不能直接把“整个会话的全部消息”传入任何一张卡片，否则兄弟分支互相影响，产品的分支语义会失效。会话知识助手是唯一默认跨当前会话所有分支查找的入口。</p>
+<p>快照保存有序的不可变消息引用，避免每次分叉都物理复制所有文本。模型请求需要的历史工具记录、推理续接字段由适配器按提供商协议保存和重建，不作为通用聊天文本强塞给其他接口。</p>
+<p>已确认默认自动摘要并提示，允许回看原文。建议实现：保留近期原文、选文和必要证据，把较早内容摘要成带源消息范围与版本的记录。原消息永不因摘要被删除。检索可回到原文；压缩与索引是不同用途，不能互相替代。</p>
+<p>摘要使用会话绑定的 Provider 和模型，不绕过模型锁定。请求预算预留系统指令、工具资料及输出空间，触发阈值按模型能力确定；分段摘要的每次输入也必须满足预算。摘要仅使用当前分支可见的上下文，不引入兄弟分支或分叉后的父卡片消息。复用摘要时校验来源范围及版本，避免改变已保存的分叉背景。</p>
+<p>界面提示压缩状态并提供摘要、原文入口，记录摘要调用用量。摘要失败时保留原文和草稿，显示可重试状态，不提交超限请求，也不静默丢弃较早消息。</p>
+<h2>7. 联网如何真正实现</h2>
+<p>本轮核对的官方文档中，OpenAI 提供可启用的 Web Search；DeepSeek 的 Responses API 也列出了由服务端执行的 <code>web_search</code>。这说明两者都存在原生接入路径，但具体账号、模型、接口地址和返回字段仍需真实联调验证。<a href="https://developers.openai.com/api/docs/guides/tools-web-search">OpenAI Web Search</a>、<a href="https://api-docs.deepseek.com/api/create-response/">DeepSeek Responses API</a></p>
+<h3>7.1 原生搜索路径</h3>
+<ol>
+<li>Provider 适配器识别当前连接和模型支持的搜索能力。</li>
+<li>关闭模式不启用搜索工具；自动模式允许模型选择；强制模式使用接口支持的强制工具选择。</li>
+<li>若适配器无法保证强制搜索，明确返回不支持，不能仅靠提示词承诺。</li>
+<li>将实际工具事件、来源元数据和最终回答转换成统一事件流。</li>
+<li>保存来源和实际执行结果，前端据此显示“是否搜索”和引用。</li>
+</ol>
+<p>OpenAI 和 DeepSeek 对搜索工具选择均有专门参数；自动模式允许不搜索，强制模式必须用对应配置。原生搜索可能由服务商在一轮请求内部完成多步，应用未必能精确限制内部每一步。应用设置可用的服务商预算参数及自身超时，并记录返回的实际用量。<a href="https://developers.openai.com/api/docs/guides/tools-web-search">OpenAI 文档</a>、<a href="https://api-docs.deepseek.com/api/create-response/">DeepSeek 文档</a></p>
+<h3>7.2 独立搜索：首版必须交付</h3>
+<p>用户已确定首版加入独立搜索。本地服务增加搜索与网页内容读取适配器，把结果交给该会话原模型回答，不借机切换聊天模型。搜索服务独立配置，可能需要另一个服务账户和 API Key。</p>
+<p>通用执行链路为：确定是否搜索 → 生成查询 → 调用搜索服务 → 获取可用正文或摘要 → 按预算选取资料并分配来源 ID → 当前会话模型回答 → 校验引用并保存来源。只有实际获取正文时才显示“读取网页”；只拿到搜索摘要时如实保留资料类型。</p>
+<p>关闭模式直接跳过这条链路；强制模式由本地服务确保执行检索；自动模式让同一会话模型判断是否需要搜索。支持工具调用的模型可使用标准工具循环；只有文本接口的兼容模型可通过受校验的查询计划，由本地服务执行搜索。查询计划解析失败时明确报错，不假装已完成搜索，也不要求每个兼容接口都支持原生工具调用。</p>
+<p>搜索计划、查询数量、资料大小、工具轮数及执行时间均有上限。只向搜索服务发送必要的检索词或 URL，不默认发送整段会话。界面显示当前使用的搜索服务，错误不会触发未配置的服务切换。</p>
+<p>应验证搜索结果相关性、中文覆盖、网页提取质量、来源可追溯性和实际成本。原生路径失败是否启用独立搜索，必须有明确配置；不能悄悄向新服务发送会话内容。</p>
+<p>不把“直接访问搜索引擎网页”当作默认可维护方案。下一阶段先评估独立搜索供应商的中文结果、正文能力、价格和用户本地网络可达性，给出可评审的接入建议；本轮不购买服务或安装相关插件。</p>
+<h3>7.3 资料边界</h3>
+<p>联网返回的网页是资料，不是应用指令。网页内容不能覆盖系统规则、改变 Provider 或读取本地密钥。自定义网页读取只允许经校验的公网 HTTP(S) 目标，对重定向、内网目标、文件协议和响应大小设置限制。</p>
+<h2>8. 会话知识助手如何实现</h2>
+<p>建议路径：用户问题 → 同一会话模型理解查询与别名 → 限定会话的候选检索 → 必要的原文补取 → 同一模型基于证据回答 → 校验来源 ID → 导航到卡片与消息。</p>
+<p>短会话可以在预算内把完整的相关原文提供给模型；内容增长后再使用索引筛选。任何检索都必须强制限定 <code>conversation_id</code>，不只在提示词里要求隔离。</p>
+<p>首版不把关键词搜索包装成语义检索。查询改写、别名与证据整理负责处理自然语言问题；对隐含主题、跨分支比较和中文短词单独验收。若效果达不到产品要求，再评估本地或远端 embedding，而不是先承诺质量。</p>
+<p>SQLite FTS5 默认 tokenizer 以字符类别与分隔符组织词项，不等同于中文分词；trigram 也有短查询限制。因此应加入中文词项预处理，标题/别名精确与子串匹配，以及对短词的补充检索。FTS5 负责候选索引，不独自承担语义理解。<a href="https://sqlite.org/fts5.html">SQLite FTS5 文档</a></p>
+<p>助手保存自己的追问历史，但不将自己的总结当作新的原始证据反复索引。所有引用须能对应到实际保存的片段；来源不存在时不能显示可点击的假卡片。</p>
+<h2>9. 本地运行、密钥与可靠性</h2>
+<ul>
+<li>本地服务只监听回环地址，前端与 API 同源。</li>
+<li>本地服务仍检查请求来源和会话授权，防止其他网页借浏览器调用本地敏感接口；不以“没有账号”等同于“所有请求都可信”。</li>
+<li>Provider Key 只由本地服务使用。接口返回配置时只返回掩码与是否已配置；日志排除鉴权头和密钥。</li>
+<li>草稿与消息保存独立于卡片动画。树导航不触发隐式重发。</li>
+<li>每次请求使用幂等键；用户消息写入和模型锁定在一个事务里完成。</li>
+<li>每张卡片同一时间只运行一条生成任务；不同卡片可以排队或有限并发，界面显示各自状态。</li>
+<li>流式断开、应用重启、取消和错误都使用明确状态；不将缺少结束事件的回答标为完成。</li>
+<li>重试仅在可确认不会重复造成外部副作用的步骤执行，收费请求不无限重试。</li>
+</ul>
+<h2>10. 实施顺序和完成标准</h2>
+<table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>交付</th>
+<th>通过条件</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M1 本地应用骨架</td>
+<td>启动服务、界面组件、数据库迁移、消息与树保存</td>
+<td>刷新和重启后恢复会话、分支与草稿；保持已确认的 UI。</td>
+</tr>
+<tr>
+<td>M2 真实模型问答</td>
+<td>Provider 管理、锁定、上下文、流式输出、取消重试</td>
+<td>用真实账户完成 OpenAI 与 DeepSeek 对话；测试引用和探索不串上下文。</td>
+</tr>
+<tr>
+<td>M3 联网与推理</td>
+<td>独立搜索配置及执行、原生能力适配、来源保存、推理参数</td>
+<td>至少一个无原生搜索的兼容模型成功使用独立搜索；关闭/自动/强制行为与真实调用一致，失败路径可解释。</td>
+</tr>
+<tr>
+<td>M4 会话知识助手</td>
+<td>索引、自然语言追问、跨分支证据回答、来源定位</td>
+<td>不串会话，查询到真实保存内容，跳转准确。</td>
+</tr>
+<tr>
+<td>M5 可恢复性与交付</td>
+<td>备份、启动说明、核心端到端测试</td>
+<td>新启动环境可按说明使用；不需要重新录入已保存的数据。</td>
+</tr>
+</tbody>
+</table>
+<p>阶段可以交叉推进，但必须分别报告“已实现”“模拟验证通过”“真实 API 验收通过”。当前只完成 1.0 产品文档与 UI 原型，不得把这张路线图当作已有功能。</p>
+<h2>11. 下一轮讨论顺序</h2>
+<ol>
+<li>开发方评估独立搜索供应商，推荐具体服务并说明账户与费用；用户决定实际使用的账户和预算约束。</li>
+<li>按已确定的本机运行、独立搜索和自动摘要方向，细化实现与验证任务。</li>
+<li>开始开发后，在本地配置页填写用于联调的模型与搜索凭据。</li>
+</ol>
+<p>其余实现细节由开发方选择、记录理由并完成验证，不要求用户逐个挑选技术库。</p>
+<p><a href="TECHNICAL_DESIGN.md">查看 Markdown 源文档</a></p></main></body></html>

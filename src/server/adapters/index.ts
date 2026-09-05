@@ -1,0 +1,44 @@
+// 适配器工厂：根据 ProviderConfig 与系统凭据创建适配器实例。
+import { OpenAIAdapter, DeepSeekAdapter, CustomAdapter } from "./openai.js";
+import { TavilyAdapter } from "./tavily.js";
+import type { Adapter, SearchAdapter } from "./types.js";
+import type { ProviderConfig, ProviderCapabilities } from "../../shared/types.js";
+import { getSecret } from "../secret.js";
+import * as repo from "../repo.js";
+
+// 默认能力表（按类型；连接测试后可更新）
+export function defaultCapabilities(type: ProviderConfig["type"]): ProviderCapabilities {
+  switch (type) {
+    case "openai":
+      return { web_search: true, thinking: true, tool_calls: true, force_search: true, models: [], context_window: 128000 };
+    case "deepseek":
+      return { web_search: false, thinking: true, tool_calls: false, force_search: false, models: [], context_window: 64000 };
+    case "custom":
+      return { web_search: false, thinking: false, tool_calls: false, force_search: false, models: [], context_window: 32000 };
+  }
+}
+
+export async function createAdapter(provider: ProviderConfig): Promise<Adapter> {
+  const key = provider.has_secret ? await getSecret(provider.secret_ref) : null;
+  if (!key && provider.type !== "custom") {
+    // 允许无 key 的自定义接口
+  }
+  switch (provider.type) {
+    case "openai":
+      return new OpenAIAdapter(key || "", provider.api_base, provider.capabilities.web_search);
+    case "deepseek":
+      return new DeepSeekAdapter(key || "", provider.api_base, provider.capabilities.web_search);
+    case "custom":
+      return new CustomAdapter(key || "", provider.api_base);
+  }
+}
+
+export async function createSearchAdapter(): Promise<SearchAdapter | null> {
+  const cfg = repo.search.get();
+  if (!cfg || !cfg.enabled || cfg.provider !== "tavily") return null;
+  const key = cfg.has_secret ? await getSecret(cfg.secret_ref) : null;
+  if (!key) return null;
+  return new TavilyAdapter(key, cfg.api_base);
+}
+
+export { OpenAIAdapter, DeepSeekAdapter, CustomAdapter, TavilyAdapter };
