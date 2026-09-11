@@ -1,10 +1,13 @@
 // 跨前后端共享的类型定义。前后端使用同一套类型，避免接口与实现脱节。
 
-export type ProviderType = "openai" | "deepseek" | "custom";
+export type ProviderType = "openai" | "deepseek" | "openrouter" | "custom";
 export type RunPurpose = "chat" | "branch" | "summary" | "assistant" | "search_query";
 
 export type WebMode = "off" | "auto" | "force";
-export type ThinkMode = "off" | "standard" | "deep";
+export type ThinkMode = "default" | "enabled" | "none" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max" | "off" | "standard" | "deep";
+export interface ConversationSettingsPatch {
+  title?: string; model?: string; provider_id?: string; web_mode?: WebMode; think_mode?: ThinkMode;
+}
 
 export type MessageRole = "user" | "assistant" | "system";
 export type MessageStatus =
@@ -102,7 +105,47 @@ export interface SelectionAnchor {
   created_at: string;
 }
 
+// 术语关联：会话级"术语 → 首次探索卡片"稳定映射。
+// 普通点击术语统一跳到 first_card_id（首次探索），与 selection_anchor（位置记录）
+// 和 knowledge_topic（RAG 知识主题）职责分离。
+export interface TermLink {
+  id: string;
+  conversation_id: string;
+  term_key: string;    // 规范匹配键（NFC + trim + 小写）
+  term_text: string;   // 原始术语文本（展示用）
+  first_card_id: string; // 首次探索卡片（默认导航目标）
+  first_anchor_id: string | null; // 首次源锚点（失效判断用）
+  created_at: string;
+}
+
+// Shift+点击重新探索的出处信息（术语本次出现的精确位置）
+export interface TermSource {
+  message_id: string;
+  card_id: string;
+  selected_text: string;
+  start_offset: number;
+  end_offset: number;
+}
+
+export interface Attachment {
+  id: string; // 附件 id（文件本体存于数据目录 attachments/<id>）
+  name: string; // 原始文件名
+  mime: string; // MIME 类型
+  size: number; // 字节数
+}
+
+// 用户笔记卡片：会话 Tab 下的可编辑笔记（标题 + markdown 正文）
+export interface NoteCard {
+  id: string;
+  conversation_id: string;
+  title: string;
+  content_markdown: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Message {
+  knowledge_excluded?: boolean;
   id: string;
   card_id: string;
   conversation_id: string;
@@ -121,6 +164,8 @@ export interface Message {
   created_at: string;
   updated_at: string;
   quote_anchor_id: string | null; // 用户消息引用的来源锚点
+  attachments: Attachment[]; // 用户消息携带的附件
+  sources?: Source[]; // 联网搜索来源（assistant 消息，由 run 关联）
 }
 
 export interface MessageQuote {
@@ -182,12 +227,19 @@ export interface Source {
 }
 
 export interface KnowledgeAssistantMessage {
+  context_valid?: boolean;
   id: string;
   conversation_id: string;
   role: "user" | "assistant";
   content: string;
-  evidence: { card_id: string; message_id: string; anchor_id?: string }[];
+  evidence: { card_id: string; message_id: string; anchor_id?: string;
+    excerpts?: { message_id: string; text: string; start_offset: number; end_offset: number }[];
+  }[];
+  status?: "streaming" | "complete" | "stopped" | "failed";
   run_id: string | null;
+  run_status?: RunStatus;
+  thread_id: string | null;
+  quote?: string | null; // user 消息携带的引用原文（选中助手回答片段）
   created_at: string;
 }
 
@@ -209,11 +261,14 @@ export interface ViewState {
 export type SSEEvent =
   | { type: "run"; run: Run }
   | { type: "delta"; message_id: string; text: string }
+  | { type: "assistant_message"; message: KnowledgeAssistantMessage }
+  | { type: "assistant_delta"; message_id: string; text: string }
   | { type: "status"; run_id: string; status: RunStatus; detail?: string }
   | { type: "sources"; run_id: string; sources: Source[] }
   | { type: "message"; message: Message }
   | { type: "searching"; run_id: string; queries: string[]; service: string }
   | { type: "reading"; run_id: string; url: string }
-  | { type: "done"; run_id: string; message: Message; run: Run }
+  | { type: "thinking"; run_id: string; text: string }
+  | { type: "done"; run_id: string; message: Message | null; run: Run }
   | { type: "error"; run_id: string; message: string; run?: Run }
   | { type: "summary"; run_id: string; detail: string };
