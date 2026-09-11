@@ -151,3 +151,49 @@ describe("幂等性", () => {
     expect(r1.run.id).not.toBe(r2.run.id);
   });
 });
+
+describe("附件", () => {
+  it("messages.create 携带 attachments 落盘并可读回", () => {
+    const p = makeProvider();
+    const { conv, main } = makeConv(p);
+    const atts = [
+      { id: "att-1", name: "图.png", mime: "image/png", size: 1024 },
+      { id: "att-2", name: "笔记.md", mime: "text/markdown", size: 256 },
+    ];
+    const um = repo.messages.create({
+      card_id: main.id,
+      conversation_id: conv.id,
+      role: "user",
+      content: "看这个文件",
+      plaintext: "看这个文件",
+      status: "complete",
+      attachments: atts,
+    });
+    expect(um.attachments).toEqual(atts);
+    const list = repo.messages.listForCard(main.id);
+    expect(list[0]!.attachments).toEqual(atts);
+  });
+
+  it("未传 attachments 时默认空数组（兼容旧消息）", () => {
+    const p = makeProvider();
+    const { conv, main } = makeConv(p);
+    const um = repo.messages.create({
+      card_id: main.id,
+      conversation_id: conv.id,
+      role: "user",
+      content: "无附件",
+      plaintext: "无附件",
+      status: "complete",
+    });
+    expect(um.attachments).toEqual([]);
+  });
+
+  it("attachments.create 与 get 元数据读写", () => {
+    const p = makeProvider();
+    const { conv } = makeConv(p);
+    repo.attachments.create({ id: "att-x", conversation_id: conv.id, name: "a.txt", mime: "text/plain", size: 10 });
+    const got = repo.attachments.get("att-x");
+    expect(got).toEqual({ id: "att-x", name: "a.txt", mime: "text/plain", size: 10 });
+    expect(repo.attachments.get("不存在的id")).toBeNull();
+  });
+});

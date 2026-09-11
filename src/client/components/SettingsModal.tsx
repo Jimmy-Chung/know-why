@@ -1,3 +1,4 @@
+import { IconButton } from "./ui/Button.js";
 import React, { useState } from "react";
 import type { ProviderConfig, ProviderType } from "../../shared/types.js";
 import { api } from "../api.js";
@@ -14,13 +15,52 @@ export function SettingsModal({ providers, onClose, onSaved }: SettingsModalProp
   const [tab, setTab] = useState<Tab>("provider");
   const [note, setNote] = useState<{ text: string; kind: "ok" | "err" | "" }>({ text: "", kind: "" });
 
+  const [modelRefresh, setModelRefresh] = useState<Record<string, { pending: boolean; text: string; failed?: boolean }>>({});
+  const refreshModels = async (provider: ProviderConfig) => {
+    setModelRefresh(prev => ({ ...prev, [provider.id]: { pending: true, text: "正在刷新模型能力…" } }));
+    try {
+      const result = await api.getProviderModels(provider.id, provider.default_model, true);
+      setModelRefresh(prev => ({ ...prev, [provider.id]: {
+        pending: false, failed: !!result.warning,
+        text: result.warning || "模型列表与推理能力已刷新",
+      } }));
+      // 服务端缓存已更新；当前会话重新读取其所选模型的能力。
+      window.dispatchEvent(new CustomEvent("kk-model-capabilities-refreshed", { detail: provider.id }));
+    } catch {
+      setModelRefresh(prev => ({ ...prev, [provider.id]: { pending: false, failed: true, text: "刷新失败，请检查连接后重试。" } }));
+    }
+  };
+
   // provider 表单
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [pType, setPType] = useState<ProviderType>("openai");
   const [pName, setPName] = useState("");
   const [pBase, setPBase] = useState("");
   const [pModel, setPModel] = useState("");
   const [pKey, setPKey] = useState("");
   const [pDefault, setPDefault] = useState(false);
+
+  const resetForm = () => {
+    setEditingId(null);
+    setPType("openai");
+    setPName("");
+    setPBase("");
+    setPModel("");
+    setPKey("");
+    setPDefault(false);
+  };
+
+  // 点「编辑」：把现有 provider 字段填入表单，切到编辑模式（type 不可改）
+  const startEdit = (p: ProviderConfig) => {
+    setEditingId(p.id);
+    setPType(p.type);
+    setPName(p.name);
+    setPBase(p.api_base);
+    setPModel(p.default_model);
+    setPKey(""); // key 留空表示保持不变
+    setPDefault(p.is_default);
+    clearNote();
+  };
 
   // 搜索表单
   const [sBase, setSBase] = useState("https://api.tavily.com");
@@ -44,30 +84,43 @@ export function SettingsModal({ providers, onClose, onSaved }: SettingsModalProp
     }
   };
 
-  // 保存 provider
+  // 保存 provider：新建走 POST，编辑走 PATCH；key 留空表示保持不变
   const saveProvider = async () => {
     clearNote();
     if (!pName.trim()) {
       showNote("请填写名称", "err");
       return;
     }
+    if (pType === "custom" && !pBase.trim() && !editingId) {
+      showNote("自定义接口需填接口地址", "err");
+      return;
+    }
     try {
-      const p = await api.createProvider({
-        type: pType,
-        name: pName,
-        api_base: pBase,
-        default_model: pModel,
-        is_default: pDefault,
-        capabilities: undefined as any,
-      });
-      if (pKey.trim()) await api.setProviderSecret(p.id, pKey);
-      await onSaved();
-      setPName("");
-      setPBase("");
-      setPModel("");
-      setPKey("");
-      setPDefault(false);
-      showNote("Provider 已保存", "ok");
+      if (editingId) {
+        await api.updateProvider(editingId, {
+          name: pName,
+          api_base: pBase,
+          default_model: pModel,
+          is_default: pDefault,
+        });
+        if (pKey.trim()) await api.setProviderSecret(editingId, pKey);
+        await onSaved();
+        resetForm();
+        showNote("Provider 已更新", "ok");
+      } else {
+        const p = await api.createProvider({
+          type: pType,
+          name: pName,
+          api_base: pBase,
+          default_model: pModel,
+          is_default: pDefault,
+          capabilities: undefined as any,
+        });
+        if (pKey.trim()) await api.setProviderSecret(p.id, pKey);
+        await onSaved();
+        resetForm();
+        showNote("Provider 已保存", "ok");
+      }
     } catch (e) {
       showNote((e as Error).message, "err");
     }
@@ -157,14 +210,14 @@ export function SettingsModal({ providers, onClose, onSaved }: SettingsModalProp
     }
   };
 
-  const typeLabel = (t: string) => (t === "openai" ? "OpenAI" : t === "deepseek" ? "DeepSeek" : "自定义");
+  const typeLabel = (t: string) => (t === "openai" ? "OpenAI" : t === "deepseek" ? "DeepSeek" : t === "openrouter" ? "OpenRouter" : "自定义");
 
   return (
     <div className="modal" onClick={onClose}>
       <div className="settings" onClick={(e) => e.stopPropagation()}>
         <div className="settings-header">
           <h2>设置</h2>
-          <button onClick={onClose}>✕</button>
+          <IconButton onClick={onClose} icon="close" label="关闭设置" />
         </div>
         <p>配置模型服务与独立搜索。API Key 由本地服务安全保存，不进入导出文件或日志。</p>
 
@@ -179,9 +232,9 @@ export function SettingsModal({ providers, onClose, onSaved }: SettingsModalProp
 
         {tab === "provider" && (
           <div>
-            <div className="eyebrow" style={{ margin: "0 0 8px" }}>已配置</div>
+            <div className="settings-section-title">已配置</div>
             {providers.length === 0 && (
-              <p style={{ fontSize: 12, color: "var(--muted)" }}>尚未配置 Provider，先在下方添加。</p>
+              <p className="settings-description">尚未配置 Provider，先在下方添加。</p>
             )}
             {providers.map((p) => (
               <div className="provider-item" key={p.id}>
@@ -190,22 +243,28 @@ export function SettingsModal({ providers, onClose, onSaved }: SettingsModalProp
                   {p.name}
                   <br />
                   <small>{typeLabel(p.type)} · {p.default_model || "未设模型"} · {p.has_secret ? "已配置Key" : "未配置Key"}</small>
+                  {modelRefresh[p.id] && <small className={`provider-refresh-note${modelRefresh[p.id]?.failed ? " failed" : ""}`} role="status">{modelRefresh[p.id]?.text}</small>}
                 </span>
                 {p.is_default && <span className="tag">默认</span>}
                 <div className="actions">
                   <button onClick={() => testProvider(p.id)}>测试</button>
+                  <button disabled={modelRefresh[p.id]?.pending} onClick={() => refreshModels(p)} title="按已保存的连接配置重新读取模型列表与推理能力">
+                    {modelRefresh[p.id]?.pending ? "刷新中…" : "刷新模型能力"}
+                  </button>
+                  <button onClick={() => startEdit(p)}>编辑</button>
                   <button onClick={() => setDefault(p.id)}>设为默认</button>
                   <button className="danger" onClick={() => removeProvider(p)}>删除</button>
                 </div>
               </div>
             ))}
 
-            <div className="eyebrow" style={{ margin: "18px 0 8px" }}>添加 Provider</div>
+            <div className="settings-section-title">{editingId ? "编辑 Provider" : "添加 Provider"}</div>
             <label className="field">
-              服务类型
-              <select value={pType} onChange={(e) => setPType(e.target.value as ProviderType)}>
+              服务类型{editingId ? "（已锁定，不可更改）" : ""}
+              <select value={pType} onChange={(e) => setPType(e.target.value as ProviderType)} disabled={!!editingId}>
                 <option value="openai">OpenAI</option>
                 <option value="deepseek">DeepSeek</option>
+                <option value="openrouter">OpenRouter</option>
                 <option value="custom">自定义兼容接口</option>
               </select>
             </label>
@@ -224,16 +283,17 @@ export function SettingsModal({ providers, onClose, onSaved }: SettingsModalProp
               <input value={pBase} onChange={(e) => setPBase(e.target.value)} placeholder={pType === "custom" ? "https://your-host/v1" : ""} />
             </label>
             <label className="field">
-              API Key
-              <input type="password" value={pKey} onChange={(e) => setPKey(e.target.value)} placeholder="sk-..." />
+              API Key{editingId ? "（留空保持不变）" : ""}
+              <input type="password" value={pKey} onChange={(e) => setPKey(e.target.value)} placeholder={editingId ? "留空保持当前 Key 不变" : "sk-..."} />
             </label>
             <div className="checkbox-row">
               <input type="checkbox" id="pdefault" checked={pDefault} onChange={(e) => setPDefault(e.target.checked)} />
               <label htmlFor="pdefault">设为全局默认（影响新建会话）</label>
             </div>
             <div className="settings-actions">
+              {editingId && <button onClick={resetForm}>取消编辑</button>}
               <span />
-              <button className="save" onClick={saveProvider}>保存 Provider</button>
+              <button className="save" onClick={saveProvider}>{editingId ? "保存修改" : "保存 Provider"}</button>
             </div>
             <div className={`settings-note ${note.kind}`}>{note.text}</div>
           </div>
@@ -241,7 +301,7 @@ export function SettingsModal({ providers, onClose, onSaved }: SettingsModalProp
 
         {tab === "search" && (
           <div>
-            <p style={{ fontSize: 12, color: "var(--muted)", marginBottom: 18 }}>
+            <p className="settings-description">
               独立搜索为没有原生搜索能力的兼容模型提供联网资料，结果交回当前会话模型回答。
               凭据与聊天 Provider 分开管理，不改变会话已锁定的模型。首版接入 Tavily。
             </p>
@@ -268,8 +328,8 @@ export function SettingsModal({ providers, onClose, onSaved }: SettingsModalProp
               <button className="save" onClick={saveSearch}>保存搜索配置</button>
             </div>
 
-            <div className="eyebrow" style={{ margin: "22px 0 10px" }}>备份与导出</div>
-            <p style={{ fontSize: 12, color: "var(--muted)", marginBottom: 12 }}>
+            <div className="settings-section-title">备份与导出</div>
+            <p className="settings-description">
               备份为本机 SQLite 副本；导出为结构化 JSON（不含明文密钥）。密钥需单独配置。
             </p>
             <div className="settings-actions">

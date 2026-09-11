@@ -1,9 +1,43 @@
 // 会话内知识检索：FTS5 候选 + 中文词项预处理 + 标题/别名匹配。
 // 所有检索强制限定 conversation_id（数据层，不只在提示词要求）。
-import { getDb } from "./db.js";
+import { createHash } from "node:crypto";
+import { getDbPath, getDb } from "./db.js";
 import * as repo from "./repo.js";
 import { markdownToPlaintext } from "./selection.js";
+import { isOverview } from "./rag.js";
 import { ulid } from "../shared/ids.js";
+import {
+  EMBEDDING_MODEL,
+  embed,
+  embedQuery,
+  embeddingAvailable,
+  fromBlob,
+  toBlob,
+  dot,
+} from "./embedding.js";
+
+// 查询侧停用双字组：高频结构词切出的双字组，单独无区分度，
+// 会召回大量无关消息并干扰 rank 排序。仅在查询时过滤，索引侧保留完整。
+// （单字虚词如「的」「是」「了」切不出双字组，故不在此列。）
+const QUERY_STOPWORDS = new Set([
+  "人的", "的事", "的话", "的时", "的方", "的过", "的信", "的意", "的关", "的作",
+  "是一", "是的", "是什", "是怎", "是为",
+  "了我", "了这", "了那",
+  "在这", "在那", "在什",
+  "可以", "可的",
+  "什么", "怎么", "如何",
+  "关于", "对于", "以及",
+  "信息", "内容", "资料", "介绍", "解释", "背景", "含义",
+  "的话", "的话",
+]);
+
+// 从查询 token 列表里剔除停用双字组，保留有区分度的核心词
+function filterQueryTokens(tokens: string): string {
+  return tokens
+    .split(/\s+/)
+    .filter((t) => t && !QUERY_STOPWORDS.has(t))
+    .join(" ");
+}
 
 // 中文分词：CJK 双字组 + 拉丁按词；用于 FTS 索引与查询。
 export function tokenize(text: string): string {
@@ -22,103 +56,225 @@ export function tokenize(text: string): string {
   return out.join(" ");
 }
 
-// 为某会话重建索引（消息变更后调用）
-export function indexConversation(conversationId: string): void {
-  const db = getDb();
-  db.prepare("DELETE FROM knowledge_chunk WHERE conversation_id=?").run(conversationId);
-  const msgs = repo.messages.listForConversation(conversationId);
-  const stmt = db.prepare(
-    "INSERT INTO knowledge_chunk (conversation_id,message_id,card_id,role,text,raw_text,index_version) VALUES (?,?,?,?,?,?,1)",
-  );
-  for (const m of msgs) {
-    if (!m.content.trim()) continue;
-    const card = repo.cards.get(m.card_id);
-    stmt.run(conversationId, m.id, m.card_id, m.role, tokenize(m.plaintext || markdownToPlaintext(m.content)), m.content);
-    void card;
-  }
-}
-
-// 会话内检索：返回候选证据（card_id, message_id, text, cardTitle, role, anchorId?）
 export interface Candidate {
+  passageId: number;
   cardId: string;
   messageId: string;
   role: string;
   text: string;
+  question: string;
   cardTitle: string;
+  path: string;
+  createdAt: string;
+  startOffset: number;
+  endOffset: number;
+  score: number;
   anchorId?: string;
 }
+interface PassageRow {
+  id: number; conversation_id: string; message_id: string; card_id: string;
+  role: string; ordinal: number; start_offset: number; end_offset: number;
+  text: string; question: string; card_title: string; path: string;
+  created_at: string; fingerprint: string;
+}
+const digest = (text: string) => createHash("sha256").update(text).digest("hex");
 
-export function searchInSession(conversationId: string, question: string, limit = 12): Candidate[] {
+// Paragraphs stay intact when small; long paragraphs split at sentence boundaries.
+// Keep offsets in plaintext for exact source excerpts. No overlapping duplicate passages.
+export function splitPassages(text: string, maxChars = 360): { text: string; start: number; end: number }[] {
+  const out: { text: string; start: number; end: number }[] = [];
+  for (const match of text.matchAll(/[^\n]+(?:\n(?!\s*\n)[^\n]+)*/g)) {
+    let start = match.index!;
+    const end = start + match[0].length;
+    while (start < end) {
+      let stop = Math.min(start + maxChars, end);
+      if (stop < end) {
+        const part = text.slice(start, stop);
+        const boundaries = [...part.matchAll(/[。！？.!?；;\n]\s*/g)];
+        const last = boundaries.at(-1);
+        if (last && last.index! > maxChars / 2) stop = start + last.index! + last[0].length;
+      }
+      const raw = text.slice(start, stop);
+      const leading = raw.length - raw.trimStart().length;
+      const body = raw.trim();
+      if (body) out.push({ text: body, start: start + leading, end: start + leading + body.length });
+      start = stop;
+    }
+  }
+  return out;
+}
+
+// Scan source rows, but only rewrite passages whose content/context changed.
+// Snapshots reference messages; never expand snapshots into duplicate knowledge records.
+export function indexConversation(conversationId: string): void {
   const db = getDb();
-  const qTokens = tokenize(question).trim();
-  const results: Candidate[] = [];
-  const seen = new Set<string>();
-
-  // 1) FTS 匹配
-  if (qTokens) {
-    const fts = db
-      .prepare(
-        `SELECT message_id, card_id, role, raw_text FROM knowledge_chunk
-         WHERE conversation_id=? AND knowledge_chunk MATCH ? ORDER BY rank LIMIT ?`,
-      )
-      .all(conversationId, qTokens, limit) as any[];
-    for (const r of fts) {
-      if (seen.has(r.message_id)) continue;
-      seen.add(r.message_id);
-      results.push({
-        cardId: r.card_id,
-        messageId: r.message_id,
-        role: r.role,
-        text: r.raw_text,
-        cardTitle: repo.cards.get(r.card_id)?.title || "卡片",
+  const conv = repo.conversations.get(conversationId);
+  if (!conv || conv.deleted_at) return;
+  const state = db.prepare("SELECT dirty FROM knowledge_index_state WHERE conversation_id=?").get(conversationId) as {dirty:number} | undefined;
+  if (state?.dirty === 0) return;
+  const cards = repo.cards.listForConversation(conversationId);
+  const cardMap = new Map(cards.map(c => [c.id, c]));
+  const pathFor = (id: string) => {
+    const titles: string[] = []; const visited = new Set<string>();
+    let card = cardMap.get(id);
+    while (card && !visited.has(card.id)) {
+      visited.add(card.id); titles.unshift(card.title || "主卡片");
+      card = card.parent_card_id ? cardMap.get(card.parent_card_id) : undefined;
+    }
+    return titles.join(" > ");
+  };
+  const messages = repo.messages.listForConversation(conversationId).sort((a,b) => a.card_id.localeCompare(b.card_id) || a.seq - b.seq);
+  const old = new Map((db.prepare("SELECT message_id,fingerprint FROM knowledge_index_message WHERE conversation_id=?").all(conversationId) as { message_id: string; fingerprint: string }[]).map(r => [r.message_id, r.fingerprint]));
+  const live = new Set<string>();
+  const previousQuestion = new Map<string, string>();
+  let changed = false;
+  db.transaction(() => {
+    db.prepare("INSERT OR IGNORE INTO knowledge_index_state(conversation_id) VALUES(?)").run(conversationId);
+    for (const m of messages) {
+      if (m.knowledge_excluded) continue;
+      if (m.status !== "complete" || !["user", "assistant"].includes(m.role) || !m.content.trim()) continue;
+      const text = m.plaintext || markdownToPlaintext(m.content);
+      if (m.role === "user") previousQuestion.set(m.card_id, text);
+      const question = m.role === "assistant" ? previousQuestion.get(m.card_id) || "" : "";
+      const title = cardMap.get(m.card_id)?.title || "主卡片";
+      const path = pathFor(m.card_id);
+      const fingerprint = digest(JSON.stringify([2, text, question, path, m.role, m.version]));
+      live.add(m.id);
+      if (old.get(m.id) === fingerprint) continue;
+      changed = true;
+      db.prepare("DELETE FROM knowledge_passage WHERE message_id=?").run(m.id);
+      const insert = db.prepare(`INSERT INTO knowledge_passage
+        (conversation_id,message_id,card_id,role,ordinal,start_offset,end_offset,text,question,card_title,path,created_at,fingerprint,tokens)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+      splitPassages(text).forEach((part, ordinal) => {
+        insert.run(conversationId,m.id,m.card_id,m.role,ordinal,part.start,part.end,part.text,question.slice(0,240),title,path,m.created_at,fingerprint,
+          tokenize(`${title} ${part.text} ${question.slice(0,120)}`));
       });
+      db.prepare(`INSERT INTO knowledge_index_message VALUES(?,?,?) ON CONFLICT(message_id) DO UPDATE SET fingerprint=excluded.fingerprint`).run(m.id, conversationId, fingerprint);
     }
-  }
+    for (const id of old.keys()) if (!live.has(id)) {
+      changed = true;
+      db.prepare("DELETE FROM knowledge_passage WHERE message_id=?").run(id);
+      db.prepare("DELETE FROM knowledge_index_message WHERE message_id=?").run(id);
+    }
+    db.prepare("UPDATE knowledge_index_state SET dirty=0,revision=revision+? WHERE conversation_id=?").run(Number(changed),conversationId);
+  })();
+}
 
-  // 2) 标题/别名精确与子串匹配（短词与中文子串补充）
-  const topics = db
-    .prepare("SELECT title, aliases, card_ids FROM knowledge_topic WHERE conversation_id=?")
-    .all(conversationId) as any[];
-  const q = question.toLowerCase();
-  for (const t of topics) {
-    const names = [t.title, ...(JSON.parse(t.aliases || "[]") as string[])];
-    if (names.some((n: string) => n && (q.includes(n.toLowerCase()) || n.toLowerCase().includes(q)))) {
-      for (const cardId of JSON.parse(t.card_ids || "[]") as string[]) {
-        const msgs = repo.messages.listForCard(cardId);
-        for (const m of msgs) {
-          if (seen.has(m.id)) continue;
-          seen.add(m.id);
-          results.push({
-            cardId,
-            messageId: m.id,
-            role: m.role,
-            text: m.content,
-            cardTitle: repo.cards.get(cardId)?.title || "卡片",
-          });
+// One active job per conversation. Concurrent requests merge and catch new content
+// after awaits. Foreign keys + fingerprint checks prevent stale vectors returning.
+const jobs = new Map<string, Promise<void>>();
+export function indexEmbeddings(conversationId: string): Promise<void> {
+  const key = `${getDbPath()}:${conversationId}`;
+  const running = jobs.get(key);
+  if (running) return running;
+  const work = (async () => {
+    const db = getDb();
+    while (true) {
+      indexConversation(conversationId);
+      if (!repo.conversations.get(conversationId) || repo.conversations.get(conversationId)?.deleted_at) return;
+      const batch = db.prepare(`SELECT p.* FROM knowledge_passage p LEFT JOIN knowledge_passage_vector v
+        ON v.passage_id=p.id AND v.model=? WHERE p.conversation_id=? AND v.passage_id IS NULL ORDER BY p.id LIMIT 16`)
+        .all(EMBEDDING_MODEL,conversationId) as PassageRow[];
+      if (!batch.length) return;
+      const vectors = await embed(batch.map(p => `${p.path.slice(-60)}\n${p.question.slice(0,60)}\n${p.text}`));
+      if (vectors.length !== batch.length) throw new Error("向量服务返回数量不匹配");
+      indexConversation(conversationId);
+      db.transaction(() => {
+        let inserted = 0;
+        for (let i=0;i<batch.length;i++) {
+          const p = batch[i]!; const vector = vectors[i];
+          if (!vector || !db.prepare("SELECT 1 FROM knowledge_passage WHERE id=? AND fingerprint=?").get(p.id,p.fingerprint)) continue;
+          inserted += db.prepare("INSERT OR IGNORE INTO knowledge_passage_vector VALUES(?,?,?,?)").run(p.id,EMBEDDING_MODEL,toBlob(vector),vector.length).changes;
         }
-      }
+        if (inserted) db.prepare("UPDATE knowledge_index_state SET vector_revision=vector_revision+1 WHERE conversation_id=?").run(conversationId);
+      })();
+      await new Promise<void>(resolve => setImmediate(resolve));
     }
-  }
+  })();
+  jobs.set(key,work);
+  void work.finally(() => { if (jobs.get(key) === work) jobs.delete(key); }).catch(() => {});
+  return work;
+}
 
-  // 3) 短查询兜底：直接子串扫描消息 plaintext
-  if (results.length < limit && question.length >= 2) {
-    const msgs = repo.messages.listForConversation(conversationId);
-    for (const m of msgs) {
-      if (seen.has(m.id)) continue;
-      if (m.plaintext.includes(question)) {
-        seen.add(m.id);
-        results.push({
-          cardId: m.card_id,
-          messageId: m.id,
-          role: m.role,
-          text: m.content,
-          cardTitle: repo.cards.get(m.card_id)?.title || "卡片",
-        });
-      }
-    }
-  }
+interface SearchResult { candidates: Candidate[]; cacheHit: boolean; semanticReady: boolean; revision: string }
+const searchCache = new Map<string, { value: SearchResult; expires: number }>();
+function candidate(row: PassageRow, score: number): Candidate {
+  return { passageId:row.id, cardId:row.card_id, messageId:row.message_id, role:row.role,
+    text:row.text, question:row.question, cardTitle:row.card_title, path:row.path, createdAt:row.created_at,
+    startOffset:row.start_offset,endOffset:row.end_offset,score };
+}
 
-  return results.slice(0, limit);
+export async function retrievePassages(conversationId: string, question: string, limit = 40, signal?: AbortSignal): Promise<SearchResult> {
+  signal?.throwIfAborted();
+  indexConversation(conversationId); // also upgrades old sessions lazily, without modifying source history
+  const db = getDb();
+  const conv = repo.conversations.get(conversationId);
+  if (!conv || conv.deleted_at) return { candidates:[],cacheHit:false,semanticReady:false,revision:"missing" };
+  const state = db.prepare("SELECT * FROM knowledge_index_state WHERE conversation_id=?").get(conversationId) as { revision:number; vector_revision:number };
+  const revision = `${state.revision}:${state.vector_revision}`;
+  const semanticReady = await embeddingAvailable();
+  signal?.throwIfAborted();
+  const key = JSON.stringify([getDbPath(),conversationId,revision,semanticReady,question,limit]);
+  const cached = searchCache.get(key);
+  if (cached && cached.expires > Date.now()) return { ...cached.value, candidates:cached.value.candidates.map(c=>({...c})),cacheHit:true };
+
+  const ranks = new Map<number,{row:PassageRow; score:number}>();
+  const add = (rows: PassageRow[], weight=1) => rows.forEach((row,rank) => {
+    const item = ranks.get(row.id) || {row,score:0}; item.score += weight/(60+rank+1); ranks.set(row.id,item);
+  });
+  const terms = [...new Set(filterQueryTokens(tokenize(question)).split(/\s+/).filter(Boolean))].slice(0,64);
+  if (terms.length) {
+    const query = terms.map(t => `"${t}"`).join(" OR ");
+    add(db.prepare(`SELECT p.* FROM knowledge_passage_fts f JOIN knowledge_passage p ON p.id=f.rowid
+      WHERE knowledge_passage_fts MATCH ? AND p.conversation_id=? ORDER BY rank LIMIT 60`).all(query,conversationId) as PassageRow[]);
+  }
+  // Topic boosts are bounded, and never supply messages from outside this conversation.
+  const topics = db.prepare("SELECT title,aliases,card_ids FROM knowledge_topic WHERE conversation_id=?").all(conversationId) as any[];
+  const titleIds = new Set<string>();
+  const q = question.toLowerCase();
+  for (const topic of topics) {
+    const names = [topic.title,...JSON.parse(topic.aliases || "[]")];
+    if (names.some((n:string)=>n && q.includes(n.toLowerCase()))) for (const id of JSON.parse(topic.card_ids)) titleIds.add(id);
+  }
+  for (const c of repo.cards.listForConversation(conversationId)) if (c.title && c.parent_card_id && q.includes(c.title.toLowerCase())) titleIds.add(c.id);
+  for (const id of titleIds) {
+    add(db.prepare("SELECT * FROM knowledge_passage WHERE conversation_id=? AND card_id=? ORDER BY ordinal,id LIMIT 12").all(conversationId,id) as PassageRow[],.6);
+  }
+  if (isOverview(question)) {
+    const representatives = db.prepare(`SELECT * FROM (
+      SELECT p.*, ROW_NUMBER() OVER(PARTITION BY card_id ORDER BY CASE role WHEN 'assistant' THEN 0 ELSE 1 END, created_at DESC, ordinal) AS position
+      FROM knowledge_passage p WHERE conversation_id=?
+    ) WHERE position=1 ORDER BY created_at DESC LIMIT 40`).all(conversationId) as PassageRow[];
+    add(representatives,1.2);
+  }
+  // Semantic retrieval always competes with lexical retrieval, rather than only filling empty slots.
+  if (semanticReady) {
+    try {
+      const qVec = await embedQuery(question);
+      signal?.throwIfAborted();
+      const rows = db.prepare(`SELECT p.*,v.embedding,v.dim FROM knowledge_passage p JOIN knowledge_passage_vector v ON p.id=v.passage_id
+        WHERE p.conversation_id=? AND v.model=?`).all(conversationId,EMBEDDING_MODEL) as (PassageRow & {embedding:Buffer; dim:number})[];
+      const sorted = rows.filter(r=>r.dim === qVec.length).map(row=>({row,score:dot(qVec,fromBlob(row.embedding,row.dim))}))
+        .filter(r=>r.score>=.3).sort((a,b)=>b.score-a.score).slice(0,60);
+      add(sorted.map(r=>r.row));
+    } catch (error) { signal?.throwIfAborted(); /* Keyword results remain usable if embeddings fail. */ }
+  }
+  signal?.throwIfAborted();
+  // Re-check after asynchronous inference: edits/deletes may have invalidated candidates.
+  indexConversation(conversationId);
+  if (!repo.conversations.get(conversationId) || repo.conversations.get(conversationId)?.deleted_at) return {candidates:[],cacheHit:false,semanticReady,revision};
+  const live = new Set((db.prepare("SELECT id FROM knowledge_passage WHERE conversation_id=?").all(conversationId) as {id:number}[]).map(r=>r.id));
+  const candidates = [...ranks.values()].filter(r=>live.has(r.row.id)).sort((a,b)=>b.score-a.score || a.row.id-b.row.id)
+    .slice(0,Math.max(1,Math.min(limit,80))).map(r=>candidate(r.row,r.score));
+  const result = {candidates,cacheHit:false,semanticReady,revision};
+  searchCache.set(key,{value:result,expires:Date.now()+60_000});
+  while (searchCache.size>64) searchCache.delete(searchCache.keys().next().value!);
+  return {...result,candidates:candidates.map(c=>({...c}))};
+}
+
+export async function searchInSession(conversationId: string, question: string, limit = 12): Promise<Candidate[]> {
+  return (await retrievePassages(conversationId,question,limit)).candidates;
 }
 
 // 创建/更新知识主题（探索分支时调用，便于别名检索）
@@ -131,7 +287,7 @@ export function upsertTopic(conversationId: string, title: string, cardId: strin
   if (existing) {
     const cardIds = JSON.parse(existing.card_ids || "[]");
     if (!cardIds.includes(cardId)) cardIds.push(cardId);
-    db.prepare("UPDATE knowledge_topic SET card_ids=? WHERE id=?").run(JSON.stringify(cardIds), existing.id);
+    db.prepare("UPDATE knowledge_topic SET card_ids=?, aliases=? WHERE id=?").run(JSON.stringify(cardIds),JSON.stringify([...new Set([...JSON.parse(existing.aliases || "[]"),...aliases])]),existing.id);
   } else {
     const id = ulid();
     db.prepare(

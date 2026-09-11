@@ -1,7 +1,11 @@
+import { Icon } from "./ui/Icon.js";
+import { Button, IconButton } from "./ui/Button.js";
 import React, { useState } from "react";
+import { Modal, Tooltip } from "@arco-design/web-react";
 import type { ProviderConfig, Conversation } from "../../shared/types.js";
 
 interface SidebarProps {
+  collapsed?: boolean;
   conversations: Conversation[];
   currentId: string | null;
   providers: ProviderConfig[];
@@ -40,23 +44,21 @@ export function Sidebar(props: SidebarProps) {
   };
 
   return (
-    <aside className="sidebar">
+    <aside className="sidebar" id="session-navigation" aria-hidden={props.collapsed || undefined} {...{ inert: props.collapsed ? "" : undefined }} aria-label="会话导航">
       <div className="brand">
-        <span className="brand-logo">🌿</span>
+        <span className="brand-logo"><Icon name="leaf" /></span>
         <span>
           know know
           <small>让好奇心，有迹可循。</small>
         </span>
       </div>
 
-      <button className="new-btn" onClick={onNew}>
-        ＋ 新建会话 <span style={{ marginLeft: "auto" }}>↗</span>
-      </button>
+      <Button className="new-btn" onClick={onNew} icon="plus">新建会话<Icon name="arrowUpRight" /></Button>
 
       <div className="eyebrow">你的会话</div>
       <div className="session-list">
         {conversations.length === 0 && (
-          <div style={{ padding: "9px 7px", fontSize: 11, color: "var(--muted)" }}>暂无会话</div>
+          <div className="sidebar-empty">暂无会话</div>
         )}
         {conversations.map((c) => (
           <div key={c.id} className={`session-row ${c.id === currentId ? "current" : ""}`}>
@@ -70,31 +72,28 @@ export function Sidebar(props: SidebarProps) {
                   if (e.key === "Enter") commitRename(c.id);
                   if (e.key === "Escape") setEditingId(null);
                 }}
-                style={{
-                  flex: 1,
-                  minWidth: 0,
-                  padding: "9px 7px",
-                  fontSize: 12,
-                  border: "1px solid var(--accent)",
-                  borderRadius: 6,
-                  background: "var(--surface)",
-                }}
+                className="session-rename"
               />
             ) : (
-              <button onClick={() => onSelect(c.id)} onDoubleClick={() => startRename(c)} title="双击重命名">
+              <button aria-current={c.id === currentId ? "page" : undefined} onClick={() => onSelect(c.id)} onDoubleClick={() => startRename(c)}>
                 {c.title}
               </button>
             )}
-            <button
+            <IconButton
+              icon="close" label="删除会话"
               className="del"
               onClick={(e) => {
                 e.stopPropagation();
-                if (confirm(`删除会话「${c.title}」？可从回收区恢复。`)) onDelete(c.id);
+                Modal.confirm({
+                  title: "删除会话",
+                  content: `确定删除会话「${c.title}」？可从回收区恢复。`,
+                  okText: "删除",
+                  cancelText: "取消",
+                  okButtonProps: { status: "danger" },
+                  onOk: () => onDelete(c.id),
+                });
               }}
-              title="删除"
-            >
-              ✕
-            </button>
+            />
           </div>
         ))}
       </div>
@@ -102,29 +101,27 @@ export function Sidebar(props: SidebarProps) {
       <div className="sidebar-bottom">
         <div className="eyebrow">
           模型服务
-          <button onClick={onOpenSettings} title="管理 Provider" style={{ fontSize: 11 }}>
-            ⚙
-          </button>
+          <Tooltip content="管理 Provider" mini>
+            <IconButton onClick={onOpenSettings} icon="settings" label="管理模型服务" />
+          </Tooltip>
         </div>
-        <div>
+        <div className="provider-list">
           {providers.map((p) => (
             <div key={p.id} className="provider-row">
               <span className="provider-mark">{p.name.charAt(0).toUpperCase()}</span>
-              <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <span className="provider-name">
                 {p.name}
               </span>
-              <small style={{ marginLeft: "auto", fontSize: 10 }}>{p.is_default ? "默认" : p.type}</small>
+              <small>{p.is_default ? "默认" : p.type}</small>
             </div>
           ))}
           {providers.length === 0 && (
-            <div style={{ padding: "8px 6px", fontSize: 11, color: "var(--muted)" }}>未配置 Provider</div>
+            <div className="sidebar-empty">未配置模型服务</div>
           )}
         </div>
-        <button className="add-provider" onClick={onOpenSettings}>
-          ＋ 管理 Provider
-        </button>
+        <Button variant="ghost" className="add-provider" onClick={onOpenSettings} icon="settings">管理模型服务</Button>
         <div className="profile">
-          <span>J</span>
+          <span><Icon name="leaf" /></span>
           <div>
             我的知识空间
             <br />

@@ -1,0 +1,73 @@
+/* 块级所见即所得编辑器（Typora 式就地渲染）
+   焦点块显示可编辑源码层，非焦点块显示渲染层；双层面板用 display 切换。 */
+
+.wys-editor {
+  flex: 1;
+  min-height: 260px;
+  outline: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.wys-editor:focus { outline: none; }
+
+.wys-block { position: relative; }
+
+/* 双向面板：激活块显示源码，其余显示渲染 */
+.wys-active .wys-src,
+.wys-inactive .wys-render { display: block; }
+.wys-active .wys-render,
+.wys-inactive .wys-src { display: none; }
+
+.wys-src {
+  min-height: 1.6em;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.7;
+  color: var(--text);
+  caret-color: var(--accent);
+  outline: none;
+}
+.wys-src:empty::before {
+  content: "开始书写…";
+  color: var(--muted);
+  opacity: .6;
+}
+
+.wys-render {
+  line-height: 1.7;
+  cursor: text;
+  min-height: 1.6em;
+  color: var(--text);
+}
+/* 压缩块内边距，避免多块连续排列时的跳动与空隙（列表即由连续 <ul> 无缝拼成） */
+.wys-render :is(p, ul, ol, blockquote, pre, h1, h2, h3, h4, h5, h6, table, hr) { margin: 0; }
+.wys-render :is(ul, ol) { padding-left: 1.5em; margin: 0; }
+.wys-render h1 { font-size: 1.55em; font-weight: 700; margin: .3em 0; }
+.wys-render h2 { font-size: 1.35em; font-weight: 700; margin: .3em 0; }
+.wys-render h3 { font-size: 1.18em; font-weight: 700; margin: .25em 0; }
+.wys-render h4, .wys-render h5, .wys-render h6 { font-size: 1.05em; font-weight: 700; margin: .2em 0; }
+.wys-render blockquote {
+  border-left: 3px solid var(--border-strong);
+  padding-left: var(--space-3);
+  color: var(--muted);
+}
+.wys-render pre {
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  overflow-x: auto;
+}
+.wys-render code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: .9em;
+  background: var(--surface-muted);
+  border-radius: var(--radius-sm);
+  padding: .1em .3em;
+}
+.wys-render pre code { background: transparent; border: 0; padding: 0; }
+.wys-render a { color: var(--accent); text-decoration: underline; }
+.wys-render img { max-width: 100%; border-radius: var(--radius-md); }
+
+.wys-hr { border-top: 1px solid var(--border-strong); margin: var(--space-2) 0; }

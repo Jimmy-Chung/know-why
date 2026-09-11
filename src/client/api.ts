@@ -1,3 +1,4 @@
+import type { ModelCatalog } from "../shared/reasoning.js";
 // 前端 API 客户端：封装与本地服务的交互，含 SSE 订阅。
 import type {
   ProviderConfig,
@@ -6,10 +7,13 @@ import type {
   Card,
   Message,
   SelectionAnchor,
+  TermLink,
   KnowledgeAssistantMessage,
   Run,
   Source,
   SSEEvent,
+  Attachment,
+  NoteCard,
 } from "../shared/types.js";
 
 const BASE = "/api";
@@ -38,6 +42,9 @@ export const api = {
   testProvider: (id: string) =>
     fetch(`${BASE}/providers/${id}/test`, { method: "POST" }).then(j<{ ok: boolean; detail: string }>),
 
+  getProviderModels: (id: string, model: string, refresh = false, signal?: AbortSignal) =>
+    fetch(`${BASE}/providers/${id}/models?model=${encodeURIComponent(model)}${refresh ? "&refresh=1" : ""}`, { signal }).then(j<ModelCatalog>),
+
   // Search
   getSearch: () => fetch(`${BASE}/search`).then(j<SearchConfig | null>),
   setSearch: (body: any) =>
@@ -60,7 +67,9 @@ export const api = {
         drafts: Record<string, { text: string; pending_quote_anchor_id: string | null }>;
         anchors: SelectionAnchor[];
         assistant: KnowledgeAssistantMessage[];
+        notes: NoteCard[];
         view: { current_card_id: string | null; scroll_position: number } | null;
+        termLinks: TermLink[];
         provider: ProviderConfig;
       }>,
     ),
@@ -76,18 +85,38 @@ export const api = {
   createAnchor: (convId: string, body: any) =>
     fetch(`${BASE}/conversations/${convId}/anchors`, { method: "POST", headers: ct(), body: JSON.stringify(body) }).then(j<SelectionAnchor>),
   explore: (convId: string, anchorId: string) =>
-    fetch(`${BASE}/conversations/${convId}/explore`, { method: "POST", headers: ct(), body: JSON.stringify({ anchor_id: anchorId }) }).then(j<{ card: Card; run: Run; existing: boolean }>),
+    fetch(`${BASE}/conversations/${convId}/explore`, { method: "POST", headers: ct(), body: JSON.stringify({ anchor_id: anchorId }) }).then(j<{ card: Card; run?: Run; existing: boolean }>),
+  // Shift+点击：从当前出处建独立新探索；首次 target 由服务端 term_link 保持稳定
+  exploreTerm: (convId: string, body: { message_id: string; card_id: string; selected_text: string; start_offset: number; end_offset: number }) =>
+    fetch(`${BASE}/conversations/${convId}/explore-term`, { method: "POST", headers: ct(), body: JSON.stringify(body) }).then(j<{ card: Card; run?: Run; existing: boolean; termLink: TermLink }>),
+  // 清理失效的 term_link（first_card 已被删除的记录），返回清理数
+  deleteStaleTermLinks: (convId: string) =>
+    fetch(`${BASE}/conversations/${convId}/term-links/clean-stale`, { method: "POST" }).then(j<{ ok: boolean; deleted: number }>),
 
   // Messages
-  sendMessage: (cardId: string, body: { content: string; quote_anchor_id?: string | null }) =>
+  setKnowledgeExcluded: (messageId: string, excluded: boolean) =>
+    fetch(`${BASE}/messages/${messageId}/knowledge`, { method: "PATCH", headers: ct(), body: JSON.stringify({ excluded }) }).then(j<Message>),
+  sendMessage: (cardId: string, body: { content: string; quote_anchor_id?: string | null; attachments?: Attachment[] }) =>
     fetch(`${BASE}/cards/${cardId}/messages`, { method: "POST", headers: ct(), body: JSON.stringify(body) }).then(j<{ userMessage: Message; run: Run }>),
+
+  // Attachments
+  uploadAttachment: (convId: string, file: File) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    return fetch(`${BASE}/conversations/${convId}/attachments`, { method: "POST", body: fd }).then(j<Attachment & { url: string }>);
+  },
 
   // Run SSE
   streamRun: (runId: string, onEvent: (e: SSEEvent) => void, onDone?: () => void): (() => void) => {
     const ctrl = new AbortController();
-    fetch(`${BASE}/runs/${runId}/stream`, { signal: ctrl.signal })
+    let terminal = false;
+    // 开发模式：Vite proxy 会缓冲 SSE 流，改为直连后端 5179；生产模式由后端同源托管，走相对路径。
+    const isDev = typeof window !== "undefined" && String(window.location.port).trim() === "5180";
+    const sseUrl = isDev ? `http://127.0.0.1:5179${BASE}/runs/${runId}/stream` : `${BASE}/runs/${runId}/stream`;
+    fetch(sseUrl, { signal: ctrl.signal })
       .then(async (res) => {
-        const reader = res.body!.getReader();
+        if (!res.ok || !res.body) throw new Error(`连接失败（${res.status}）`);
+        const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
         while (true) {
@@ -108,14 +137,23 @@ export const api = {
             try {
               const e = JSON.parse(data) as SSEEvent;
               onEvent(e);
-              if (e.type === "done" || e.type === "error") onDone?.();
+              if (e.type === "done" || e.type === "error") { terminal = true; onDone?.(); }
             } catch {
               /* ignore */
             }
           }
         }
       })
-      .catch(() => {});
+      .then(() => {
+        if (!terminal && !ctrl.signal.aborted) throw new Error("连接已中断，请重新打开助手查看已保存的回答。");
+      })
+      .catch((error) => {
+        if (!ctrl.signal.aborted && !terminal) {
+          terminal = true;
+          onEvent({type:"error",run_id:runId,message:error instanceof Error ? error.message : "连接失败"});
+          onDone?.();
+        }
+      });
     return () => ctrl.abort();
   },
   stopRun: (runId: string) => fetch(`${BASE}/runs/${runId}/stop`, { method: "POST" }).then(j<any>),
@@ -128,8 +166,19 @@ export const api = {
     fetch(`${BASE}/conversations/${convId}/viewstate`, { method: "PUT", headers: ct(), body: JSON.stringify({ current_card_id: cardId, scroll_position: scroll }) }).then(j<any>),
 
   // Assistant
-  sendAssistant: (convId: string, question: string) =>
-    fetch(`${BASE}/conversations/${convId}/assistant`, { method: "POST", headers: ct(), body: JSON.stringify({ question }) }).then(j<{ userMsgId: string; runId: string }>),
+  sendAssistant: (convId: string, question: string, threadId?: string | null, quote?: string | null) =>
+    fetch(`${BASE}/conversations/${convId}/assistant`, { method: "POST", headers: ct(), body: JSON.stringify({ question, thread_id: threadId ?? null, quote: quote ?? null, idempotency_key: crypto.randomUUID() }) }).then(j<{ userMsgId: string; runId: string }>),
+
+  // Notes
+  listNotes: (convId: string) => fetch(`${BASE}/conversations/${convId}/notes`).then(j<NoteCard[]>),
+  createNote: (convId: string, body: { title: string; content_markdown: string }) =>
+    fetch(`${BASE}/conversations/${convId}/notes`, { method: "POST", headers: ct(), body: JSON.stringify(body) }).then(j<NoteCard>),
+  updateNote: (noteId: string, body: { title?: string; content_markdown?: string }) =>
+    fetch(`${BASE}/notes/${noteId}`, { method: "PUT", headers: ct(), body: JSON.stringify(body) }).then(j<NoteCard>),
+  deleteNote: (noteId: string) =>
+    fetch(`${BASE}/notes/${noteId}`, { method: "DELETE" }).then(j<any>),
+  deleteNotes: (ids: string[]) =>
+    fetch(`${BASE}/notes/batch-delete`, { method: "POST", headers: ct(), body: JSON.stringify({ ids }) }).then(j<{ ok: boolean; deleted: number }>),
 
   // Backup
   backup: () => fetch(`${BASE}/backup`, { method: "POST" }).then(j<{ ok: boolean; file: string }>),

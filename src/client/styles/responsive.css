@@ -1,0 +1,60 @@
+/* Layout policy: desktop split assistant; compact screens use a drawer.
+   1280 and 700 are shared boundaries, not per-component ad hoc breakpoints. */
+.app { display: grid; grid-template-columns: var(--sidebar-width) minmax(0, 1fr); height: 100dvh; background: var(--bg); overflow: hidden; transition: grid-template-columns var(--motion-panel) var(--ease-out); }
+.navigation-toggle { position: fixed; top: 22px; left: calc(var(--sidebar-width) - 46px); z-index: calc(var(--z-navigation) + 1); transition: left var(--motion-panel) var(--ease-out); }
+.navigation-backdrop { display: none; }
+.sidebar-collapsed { grid-template-columns: 0px minmax(0, 1fr); }
+.sidebar { width: var(--sidebar-width); min-width: 0; transition: transform var(--motion-panel) var(--ease-out), opacity var(--motion-panel) ease, visibility 0s; }
+.sidebar-collapsed .sidebar { transform: translateX(-100%); opacity: 0; visibility: hidden; transition: transform var(--motion-panel) var(--ease-out), opacity var(--motion-panel) ease, visibility 0s var(--motion-panel); }
+.sidebar-collapsed .navigation-toggle { left: 16px; }
+.sidebar-collapsed .header { padding-left: 68px; }
+/* 助手打开时主卡片区占满原树列，树画布在原区域绝对定位；
+   hover 前后共用同一视图，不重新挂载或改变画布尺寸。 */
+.workspace--assistant .content { grid-template-columns: minmax(0, 1fr); position: relative; }
+/* 树在助手打开时完全隐藏（display:none），.chat-pane 若仍保两列会留下 --tree-width 的空隙
+   （桌面 192px），故同时坍缩为单列让卡片占满。 */
+.workspace--assistant .chat-pane { grid-template-columns: minmax(0, 1fr); }
+.workspace--assistant .main { padding-inline: var(--space-4); }
+@media (max-width: 1279px) {
+  :root { --sidebar-width: 224px; --tree-width: 96px; }
+  .brand { gap: var(--space-2); font-size: var(--text-md); }
+  .brand small { font-size: var(--text-xs); }
+  .header { padding-inline: var(--space-5); }
+  .main { padding-inline: var(--space-4); }
+  .assistant-panel { position: absolute; inset: 0 0 0 auto; --assistant-panel-size: min(var(--assistant-width, 440px), 100%); width: var(--assistant-panel-size); box-shadow: var(--shadow-dialog); z-index: calc(var(--z-panel) + 3); }
+  .assistant-backdrop { display: block; position: absolute; inset: 0; background: var(--scrim); z-index: calc(var(--z-panel) + 2); }
+}
+@media (max-width: 700px) {
+  :root { --text-body: 15px; --tree-width: 64px; --card-content-gutter: var(--space-3); }
+  .app, .app.sidebar-collapsed { grid-template-columns: minmax(0, 1fr); }
+  .sidebar { position: fixed; inset: 0 auto 0 0; width: 272px; z-index: var(--z-navigation); box-shadow: var(--shadow-dialog); padding-top: var(--space-6); }
+  .navigation-backdrop { display: block; position: fixed; inset: 0; background: var(--scrim); z-index: calc(var(--z-navigation) - 1); }
+  .sidebar-collapsed .navigation-backdrop { display: none; }
+  .navigation-toggle { left: 226px; }
+  .sidebar-collapsed .navigation-toggle { left: 12px; }
+  .header, .sidebar-collapsed .header { padding: var(--space-4) var(--space-3) var(--space-4) 56px; min-height: 88px; gap: var(--space-2); }
+  .title-input { font-size: var(--text-md); }
+  .knowledge-btn { width: var(--control-height); padding: 0; font-size: 0; gap: 0; }
+  .content, .workspace--assistant .content { --tree-width: 64px; }
+  .main, .workspace--assistant .main { padding: var(--space-3) var(--space-2); }
+  .path { margin-bottom: var(--space-3); }
+  .card-top { padding: var(--space-3); }
+  .card-top > span:last-child { display: none; }
+  .card-messages { padding: var(--space-4) var(--card-content-gutter); }
+  .card-composer { padding: var(--space-2); margin-bottom: var(--space-3); }
+  .composer-bottom { align-items: flex-end; gap: var(--space-1); }
+  .composer-left { gap: 0; }
+  .composer-setting { padding-inline: 2px; }
+  .composer-setting select { max-width: 98px; }
+  .attach-btn { padding-inline: var(--space-2); }
+  .tree-panel { padding: var(--space-5) 0; }
+  .app:has(.workspace--assistant) .navigation-toggle { display: none; }
+  .assistant-panel { position: absolute; --assistant-panel-size: 100%; width: 100%; padding: var(--space-4); }
+  .assistant-resize-handle { display: none; }
+  .modal, .card-preview-overlay { padding: var(--space-3); }
+  .settings { padding: var(--space-5); max-height: 92dvh; }
+  .field-row { grid-template-columns: 1fr; gap: 0; }
+  .card-preview-dialog { max-height: 92dvh; }
+}
+@media (hover: none) { .session-row .del { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }

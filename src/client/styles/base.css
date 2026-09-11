@@ -1,0 +1,13 @@
+/* Reset and document defaults only. Component rules live in their owning file. */
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; }
+body { color: var(--text); font-family: var(--font-sans); font-size: var(--text-md); line-height: 1.6; background: var(--bg); -webkit-font-smoothing: antialiased; }
+button { cursor: pointer; border: 0; background: transparent; font: inherit; color: inherit; }
+button:disabled { cursor: not-allowed; opacity: .45; }
+select, input, textarea { font: inherit; color: inherit; }
+input::placeholder, textarea::placeholder { color: var(--muted); opacity: .8; }
+:where(button, select, textarea, input, a, [tabindex]):focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+small { font-size: var(--text-xs); color: var(--muted); }
+[hidden] { display: none !important; }
+::selection { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+* { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }

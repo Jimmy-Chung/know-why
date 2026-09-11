@@ -3,6 +3,7 @@
 当前版本已归档为 **1.0**。
 
 - [产品功能说明书 1.0](./versions/1.0/PRODUCT_SPEC.md)
+- [1.0 功能增补：术语全会话关联、Shift 重新探索与助手处理](./versions/1.0/TERM_LINKING_ADDENDUM.md)
 - [1.0 产品、测试与交互评审入口](./versions/1.0/index.html)
 - [1.1 多用户登录规划](./versions/1.1/PRODUCT_SPEC.md)
 

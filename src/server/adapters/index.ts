@@ -3,6 +3,7 @@ import { OpenAIAdapter, DeepSeekAdapter, CustomAdapter } from "./openai.js";
 import { TavilyAdapter } from "./tavily.js";
 import type { Adapter, SearchAdapter } from "./types.js";
 import type { ProviderConfig, ProviderCapabilities } from "../../shared/types.js";
+import { reasoningProtocol, providerBase } from "../model-capabilities.js";
 import { getSecret } from "../secret.js";
 import * as repo from "../repo.js";
 
@@ -13,6 +14,7 @@ export function defaultCapabilities(type: ProviderConfig["type"]): ProviderCapab
       return { web_search: true, thinking: true, tool_calls: true, force_search: true, models: [], context_window: 128000 };
     case "deepseek":
       return { web_search: false, thinking: true, tool_calls: false, force_search: false, models: [], context_window: 64000 };
+    case "openrouter":
     case "custom":
       return { web_search: false, thinking: false, tool_calls: false, force_search: false, models: [], context_window: 32000 };
   }
@@ -23,13 +25,16 @@ export async function createAdapter(provider: ProviderConfig): Promise<Adapter> 
   if (!key && provider.type !== "custom") {
     // 允许无 key 的自定义接口
   }
-  switch (provider.type) {
+  const protocol = reasoningProtocol(provider);
+  const base = providerBase(provider);
+  switch (protocol) {
     case "openai":
-      return new OpenAIAdapter(key || "", provider.api_base, provider.capabilities.web_search);
+      return new OpenAIAdapter(key || "", base, provider.capabilities.web_search);
     case "deepseek":
-      return new DeepSeekAdapter(key || "", provider.api_base, provider.capabilities.web_search);
+      return new DeepSeekAdapter(key || "", base, provider.capabilities.web_search);
+    case "openrouter":
     case "custom":
-      return new CustomAdapter(key || "", provider.api_base);
+      return new CustomAdapter(key || "", base, protocol);
   }
 }
 

@@ -2,6 +2,7 @@
 // 走 OpenAI 兼容 Chat Completions（非流式），适用于 openai/deepseek/custom。
 import type { ProviderConfig } from "../shared/types.js";
 import type { ChatMessage } from "./adapters/types.js";
+import { providerBase } from "./model-capabilities.js";
 import { getSecret } from "./secret.js";
 
 export async function completeChat(
@@ -11,7 +12,7 @@ export async function completeChat(
   opts: { json?: boolean; signal?: AbortSignal } = {},
 ): Promise<string> {
   const key = provider.has_secret ? await getSecret(provider.secret_ref) : "";
-  const base = (provider.api_base || defaultBase(provider.type)).replace(/\/$/, "");
+  const base = providerBase(provider);
   const body: any = { model, messages, stream: false };
   if (opts.json) {
     body.response_format = { type: "json_object" };
