@@ -1,0 +1,84 @@
+{
+  "description": "Synthetic offline lexical retrieval baseline; no real LLM or embedding inference. Latency is machine-specific.",
+  "generatedAt": "2026-09-07T08:21:00.986Z",
+  "messages": 800,
+  "passages": 3200,
+  "indexMs": 393.51,
+  "fixtureAndIndexMs": 551.14,
+  "passed": 8,
+  "total": 8,
+  "trials": [
+    {
+      "question": "星桥协议73有什么限制？",
+      "foundExpected": true,
+      "retrievalMs": 5.32,
+      "cacheMs": 0.2,
+      "cacheHit": true,
+      "inputTokensEstimate": 3415,
+      "evidenceTokensEstimate": 2950
+    },
+    {
+      "question": "蓝鲸协议73有什么限制？",
+      "foundExpected": true,
+      "retrievalMs": 3.77,
+      "cacheMs": 0.12,
+      "cacheHit": true,
+      "inputTokensEstimate": 3415,
+      "evidenceTokensEstimate": 2950
+    },
+    {
+      "question": "赤羽协议73有什么限制？",
+      "foundExpected": true,
+      "retrievalMs": 4.37,
+      "cacheMs": 0.23,
+      "cacheHit": true,
+      "inputTokensEstimate": 3415,
+      "evidenceTokensEstimate": 2950
+    },
+    {
+      "question": "银杉协议73有什么限制？",
+      "foundExpected": true,
+      "retrievalMs": 3.94,
+      "cacheMs": 0.19,
+      "cacheHit": true,
+      "inputTokensEstimate": 3415,
+      "evidenceTokensEstimate": 2950
+    },
+    {
+      "question": "碧海协议73有什么限制？",
+      "foundExpected": true,
+      "retrievalMs": 4.98,
+      "cacheMs": 0.2,
+      "cacheHit": true,
+      "inputTokensEstimate": 3415,
+      "evidenceTokensEstimate": 2950
+    },
+    {
+      "question": "紫藤协议73有什么限制？",
+      "foundExpected": true,
+      "retrievalMs": 4.55,
+      "cacheMs": 0.17,
+      "cacheHit": true,
+      "inputTokensEstimate": 3415,
+      "evidenceTokensEstimate": 2950
+    },
+    {
+      "question": "苍鹭协议73有什么限制？",
+      "foundExpected": true,
+      "retrievalMs": 3.77,
+      "cacheMs": 0.12,
+      "cacheHit": true,
+      "inputTokensEstimate": 3415,
+      "evidenceTokensEstimate": 2950
+    },
+    {
+      "question": "白榆协议73有什么限制？",
+      "foundExpected": true,
+      "retrievalMs": 3.71,
+      "cacheMs": 0.13,
+      "cacheHit": true,
+      "inputTokensEstimate": 3415,
+      "evidenceTokensEstimate": 2950
+    }
+  ]
+}
