@@ -11,9 +11,11 @@ export interface ChatMessage {
 
 export interface AdapterRequest {
   model: string;
+  maxOutputTokens?: number;
   messages: ChatMessage[];
   webMode: WebMode;
   thinkMode: ThinkMode;
+  reasoning?: import("../../shared/reasoning.js").ReasoningCapabilities;
   signal?: AbortSignal;
   // 适配器可用此回调报告已用 token（尽力而为）
   onUsage?: (u: { prompt_tokens?: number; completion_tokens?: number }) => void;

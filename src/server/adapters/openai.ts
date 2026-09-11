@@ -2,6 +2,9 @@
 import type { Adapter, AdapterRequest, StreamEvent } from "./types.js";
 import { AdapterError } from "./types.js";
 
+import { reasoningRequest } from "../model-capabilities.js";
+import { UNKNOWN_REASONING } from "../../shared/reasoning.js";
+
 const DEFAULT_BASE = "https://api.openai.com/v1";
 
 export class OpenAIAdapter implements Adapter {
@@ -50,10 +53,8 @@ export class OpenAIAdapter implements Adapter {
       stream: true,
       stream_options: { include_usage: true },
     };
-    if (req.thinkMode !== "off") {
-      // 兼容性参数：reasoning_effort（仅 reasoning 模型识别）
-      body.reasoning_effort = req.thinkMode === "deep" ? "high" : "medium";
-    }
+    if (req.maxOutputTokens) body.max_completion_tokens = req.maxOutputTokens;
+    Object.assign(body, reasoningRequest(req.thinkMode, req.reasoning ?? UNKNOWN_REASONING, "openai"));
     const res = await fetch(`${this.base()}/chat/completions`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${this.apiKey}` },
@@ -67,9 +68,15 @@ export class OpenAIAdapter implements Adapter {
       if (evt === "[DONE]") return { kind: "done" };
       try {
         const j = JSON.parse(evt);
+        if (j.usage) req.onUsage?.(j.usage);
         const choice = j.choices?.[0];
         const delta = choice?.delta?.content;
-        if (delta) return { kind: "delta", text: delta };
+        const d = j.choices?.[0]?.delta;
+        const thinking = d?.reasoning_content || d?.reasoning || d?.reasoning_details?.map((r: any) => r.text || r.summary || "").join("");
+        if (thinking || delta) return { kind: "multi", events: [
+          ...(thinking ? [{ type: "thinking", text: thinking }] : []),
+          ...(delta ? [{ type: "delta", text: delta }] : []),
+        ] };
         if (j.usage) return { kind: "usage", usage: j.usage };
         return { kind: "ignore" };
       } catch {
@@ -87,7 +94,8 @@ export class OpenAIAdapter implements Adapter {
       tools,
       stream: true,
     };
-    if (req.thinkMode !== "off") body.reasoning = { effort: req.thinkMode === "deep" ? "high" : "medium" };
+    if (req.maxOutputTokens) body.max_output_tokens = req.maxOutputTokens;
+    Object.assign(body, reasoningRequest(req.thinkMode, req.reasoning ?? UNKNOWN_REASONING, "openai", true));
 
     let res: Response;
     try {
@@ -172,9 +180,8 @@ export class DeepSeekAdapter implements Adapter {
       messages: req.messages,
       stream: true,
     };
-    if (req.thinkMode !== "off" && req.model.includes("reasoner")) {
-      // deepseek-reasoner 自带推理，无需额外参数
-    }
+    if (req.maxOutputTokens) body.max_tokens = req.maxOutputTokens;
+    Object.assign(body, reasoningRequest(req.thinkMode, req.reasoning ?? UNKNOWN_REASONING, "deepseek"));
     const res = await fetch(`${this.base()}/chat/completions`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${this.apiKey}` },
@@ -186,13 +193,14 @@ export class DeepSeekAdapter implements Adapter {
       if (evt === "[DONE]") return { kind: "done" };
       try {
         const j = JSON.parse(evt);
+        if (j.usage) req.onUsage?.(j.usage);
         const choice = j.choices?.[0];
         const delta = choice?.delta?.content;
         const reasoning = choice?.delta?.reasoning_content;
         const out: StreamEvent[] = [];
         if (reasoning) out.push({ type: "thinking", text: reasoning });
         if (delta) out.push({ type: "delta", text: delta });
-        if (j.usage) return { kind: "multi", events: out.length ? out : [{ type: "usage-only" as any }] };
+        if (j.usage && !out.length) return { kind: "usage", usage: j.usage };
         return out.length ? { kind: "multi", events: out } : { kind: "ignore" };
       } catch {
         return { kind: "ignore" };
@@ -204,7 +212,7 @@ export class DeepSeekAdapter implements Adapter {
 // 自定义兼容接口适配器：仅 OpenAI 兼容 Chat Completions，不假定原生搜索/思考。
 export class CustomAdapter implements Adapter {
   type = "custom" as const;
-  constructor(private apiKey: string, private apiBase: string) {}
+  constructor(private apiKey: string, private apiBase: string, private protocol: string = "custom") {}
   supportsNativeSearch() {
     return false;
   }
@@ -221,6 +229,11 @@ export class CustomAdapter implements Adapter {
       });
       if (res.status === 401 || res.status === 403) return { ok: false, detail: "鉴权失败" };
       if (!res.ok) return { ok: false, detail: `接口返回 ${res.status}` };
+      // 校验返回的是 JSON API 而非 HTML 页面（如缺 /api/v1 时会命中网站首页）
+      const ct = res.headers.get("content-type") || "";
+      if (!ct.includes("json")) return { ok: false, detail: "接口地址可能有误：返回非 JSON（请检查是否缺 /api/v1 路径）" };
+      const j = await res.json().catch(() => null);
+      if (!j) return { ok: false, detail: "接口返回非 JSON（请检查地址是否含 /api/v1）" };
       return { ok: true, detail: "连接成功" };
     } catch (e) {
       return { ok: false, detail: `网络不可达：${(e as Error).message}` };
@@ -228,6 +241,8 @@ export class CustomAdapter implements Adapter {
   }
   async *stream(req: AdapterRequest): AsyncIterable<StreamEvent> {
     const body: any = { model: req.model, messages: req.messages, stream: true };
+    if (req.maxOutputTokens) body.max_tokens = req.maxOutputTokens;
+    Object.assign(body, reasoningRequest(req.thinkMode, req.reasoning ?? UNKNOWN_REASONING, this.protocol));
     const res = await fetch(`${this.base()}/chat/completions`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${this.apiKey}` },
@@ -239,8 +254,15 @@ export class CustomAdapter implements Adapter {
       if (evt === "[DONE]") return { kind: "done" };
       try {
         const j = JSON.parse(evt);
+        if (j.usage) req.onUsage?.(j.usage);
+        if (j.usage && !j.choices?.[0]?.delta?.content) return { kind: "usage", usage: j.usage };
         const delta = j.choices?.[0]?.delta?.content;
-        if (delta) return { kind: "delta", text: delta };
+        const d = j.choices?.[0]?.delta;
+        const thinking = d?.reasoning_content || d?.reasoning || d?.reasoning_details?.map((r: any) => r.text || r.summary || "").join("");
+        if (thinking || delta) return { kind: "multi", events: [
+          ...(thinking ? [{ type: "thinking", text: thinking }] : []),
+          ...(delta ? [{ type: "delta", text: delta }] : []),
+        ] };
         return { kind: "ignore" };
       } catch {
         return { kind: "ignore" };

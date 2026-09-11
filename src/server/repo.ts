@@ -23,7 +23,11 @@ import type {
   KnowledgeAssistantMessage,
   Draft,
   ViewState,
+  Attachment,
+  NoteCard,
+  TermLink,
 } from "../shared/types.js";
+import { termKey } from "../shared/term-key.js";
 import { getDb } from "./db.js";
 
 type Row = Record<string, any>;
@@ -115,10 +119,10 @@ export const providers = {
       )
       .run(
         next.name,
-        next.api_base,
-        next.default_model,
+        next.api_base ?? "",
+        next.default_model ?? "",
         next.is_default ? 1 : 0,
-        JSON.stringify(next.capabilities),
+        JSON.stringify(next.capabilities ?? {}),
         next.has_secret ? 1 : 0,
         next.config_version,
         now,
@@ -285,6 +289,7 @@ export const conversations = {
       db.prepare("DELETE FROM knowledge_assistant_message WHERE conversation_id=?").run(id);
       db.prepare("DELETE FROM knowledge_chunk WHERE conversation_id=?").run(id);
       db.prepare("DELETE FROM knowledge_topic WHERE conversation_id=?").run(id);
+      db.prepare("DELETE FROM term_link WHERE conversation_id=?").run(id);
       db.prepare("DELETE FROM summary_record WHERE conversation_id=?").run(id);
       db.prepare("DELETE FROM run WHERE conversation_id=?").run(id);
       db.prepare("DELETE FROM message_quote WHERE anchor_id IN (SELECT id FROM selection_anchor WHERE conversation_id=?)").run(id);
@@ -293,6 +298,7 @@ export const conversations = {
       db.prepare("DELETE FROM message WHERE conversation_id=?").run(id);
       db.prepare("DELETE FROM context_snapshot WHERE conversation_id=?").run(id);
       db.prepare("DELETE FROM card WHERE conversation_id=?").run(id);
+      db.prepare("DELETE FROM note_card WHERE conversation_id=?").run(id);
       db.prepare("DELETE FROM view_state WHERE conversation_id=?").run(id);
       db.prepare("DELETE FROM conversation WHERE id=?").run(id);
       getDb().exec("COMMIT");
@@ -381,6 +387,7 @@ export const cards = {
 
 function rowToMessage(r: any): Message {
   return {
+    knowledge_excluded: !!r.knowledge_excluded,
     id: r.id,
     card_id: r.card_id,
     conversation_id: r.conversation_id,
@@ -399,10 +406,14 @@ function rowToMessage(r: any): Message {
     created_at: r.created_at,
     updated_at: r.updated_at,
     quote_anchor_id: r.quote_anchor_id,
+    attachments: JSON.parse(r.attachments || "[]"),
   };
 }
 
 export const messages = {
+  setKnowledgeExcluded(id: string, excluded: boolean): void {
+    getDb().prepare("UPDATE message SET knowledge_excluded=? WHERE id=? AND role='assistant' AND status='complete'").run(Number(excluded), id);
+  },
   listForCard(cardId: string): Message[] {
     return getDb()
       .prepare("SELECT * FROM message WHERE card_id=? ORDER BY seq")
@@ -438,13 +449,14 @@ export const messages = {
     web_mode?: WebMode | null;
     think_mode?: ThinkMode | null;
     quote_anchor_id?: string | null;
+    attachments?: Attachment[];
   }): Message {
     const now = new Date().toISOString();
     const id = ulid();
     const seq = this.nextSeq(input.card_id);
     getDb()
       .prepare(
-        "INSERT INTO message (id,card_id,conversation_id,role,content,plaintext,version,status,seq,run_id,model,provider_type,web_mode,think_mode,error,quote_anchor_id,created_at,updated_at) VALUES (?,?,?,?,?,?,1,?,?,?,?,?,?,?,NULL,?,?,?)",
+        "INSERT INTO message (id,card_id,conversation_id,role,content,plaintext,version,status,seq,run_id,model,provider_type,web_mode,think_mode,error,quote_anchor_id,attachments,created_at,updated_at) VALUES (?,?,?,?,?,?,1,?,?,?,?,?,?,?,NULL,?,?,?,?)",
       )
       .run(
         id,
@@ -461,6 +473,7 @@ export const messages = {
         input.web_mode ?? null,
         input.think_mode ?? null,
         input.quote_anchor_id ?? null,
+        JSON.stringify(input.attachments ?? []),
         now,
         now,
       );
@@ -800,17 +813,25 @@ export const summaries = {
 };
 
 export const assistant = {
+  update(id: string, content: string, status: KnowledgeAssistantMessage["status"]): void {
+    getDb().prepare("UPDATE knowledge_assistant_message SET content=?,status=? WHERE id=?").run(content,status ?? "complete",id);
+  },
   list(conversationId: string): KnowledgeAssistantMessage[] {
     return getDb()
-      .prepare("SELECT * FROM knowledge_assistant_message WHERE conversation_id=? ORDER BY created_at")
+      .prepare("SELECT m.*, r.status AS run_status FROM knowledge_assistant_message m LEFT JOIN run r ON r.id=m.run_id WHERE m.conversation_id=? ORDER BY m.created_at,m.rowid")
       .all(conversationId)
       .map((r: any) => ({
         id: r.id,
         conversation_id: r.conversation_id,
         role: r.role,
+        status: r.status,
         content: r.content,
         evidence: JSON.parse(r.evidence || "[]"),
+        context_valid: r.context_valid !== 0,
         run_id: r.run_id,
+        run_status: r.run_status ?? undefined,
+        thread_id: r.thread_id ?? null,
+        quote: r.quote ?? null,
         created_at: r.created_at,
       }));
   },
@@ -818,25 +839,133 @@ export const assistant = {
     conversation_id: string;
     role: "user" | "assistant";
     content: string;
-    evidence: { card_id: string; message_id: string; anchor_id?: string }[];
+    evidence: KnowledgeAssistantMessage["evidence"];
+    status?: KnowledgeAssistantMessage["status"];
     run_id?: string | null;
+    thread_id?: string | null;
+    quote?: string | null;
   }): KnowledgeAssistantMessage {
     const id = ulid();
     const now = new Date().toISOString();
     getDb()
       .prepare(
-        "INSERT INTO knowledge_assistant_message (id,conversation_id,role,content,evidence,run_id,created_at) VALUES (?,?,?,?,?,?,?)",
+        "INSERT INTO knowledge_assistant_message (id,conversation_id,role,content,evidence,run_id,thread_id,created_at,status,quote) VALUES (?,?,?,?,?,?,?,?,?,?)",
       )
-      .run(id, input.conversation_id, input.role, input.content, JSON.stringify(input.evidence), input.run_id ?? null, now);
+      .run(id, input.conversation_id, input.role, input.content, JSON.stringify(input.evidence), input.run_id ?? null, input.thread_id ?? null, now, input.status ?? "complete", input.quote ?? null);
     return {
       id,
       conversation_id: input.conversation_id,
       role: input.role,
+      status: input.status ?? "complete",
       content: input.content,
       evidence: input.evidence,
       run_id: input.run_id ?? null,
+      thread_id: input.thread_id ?? null,
+      quote: input.quote ?? null,
       created_at: now,
     };
+  },
+};
+
+export const attachments = {
+  create(input: {
+    id: string;
+    conversation_id: string;
+    name: string;
+    mime: string;
+    size: number;
+  }): Attachment {
+    const now = new Date().toISOString();
+    getDb()
+      .prepare("INSERT INTO attachment (id,conversation_id,name,mime,size,created_at) VALUES (?,?,?,?,?,?)")
+      .run(input.id, input.conversation_id, input.name, input.mime, input.size, now);
+    return { id: input.id, name: input.name, mime: input.mime, size: input.size };
+  },
+  get(id: string): Attachment | null {
+    const r = getDb().prepare("SELECT * FROM attachment WHERE id=?").get(id) as Row | undefined;
+    return r ? { id: r.id, name: r.name, mime: r.mime, size: r.size } : null;
+  },
+};
+
+export const notes = {
+  listForConversation(conversationId: string): NoteCard[] {
+    return getDb()
+      // rowid 兜底：同一毫秒内多条更新的顺序稳定（新创建的在前）
+      .prepare("SELECT * FROM note_card WHERE conversation_id=? ORDER BY updated_at DESC, rowid DESC")
+      .all(conversationId) as unknown as NoteCard[];
+  },
+  get(id: string): NoteCard | null {
+    const r = getDb().prepare("SELECT * FROM note_card WHERE id=?").get(id) as Row | undefined;
+    return r ? (r as unknown as NoteCard) : null;
+  },
+  create(input: { conversation_id: string; title: string; content_markdown: string }): NoteCard {
+    const now = new Date().toISOString();
+    const id = ulid();
+    getDb()
+      .prepare("INSERT INTO note_card (id,conversation_id,title,content_markdown,created_at,updated_at) VALUES (?,?,?,?,?,?)")
+      .run(id, input.conversation_id, input.title, input.content_markdown, now, now);
+    return { id, conversation_id: input.conversation_id, title: input.title, content_markdown: input.content_markdown, created_at: now, updated_at: now };
+  },
+  update(id: string, patch: { title?: string; content_markdown?: string }): NoteCard | null {
+    const sets: string[] = [];
+    const values: unknown[] = [];
+    if (patch.title !== undefined) { sets.push("title=?"); values.push(patch.title); }
+    if (patch.content_markdown !== undefined) { sets.push("content_markdown=?"); values.push(patch.content_markdown); }
+    if (!sets.length) return getDb().prepare("SELECT * FROM note_card WHERE id=?").get(id) as unknown as NoteCard | null;
+    sets.push("updated_at=?"); values.push(new Date().toISOString());
+    getDb().prepare(`UPDATE note_card SET ${sets.join(",")} WHERE id=?`).run(...values, id);
+    const r = getDb().prepare("SELECT * FROM note_card WHERE id=?").get(id) as Row | undefined;
+    return r ? (r as unknown as NoteCard) : null;
+  },
+  delete(id: string): void {
+    getDb().prepare("DELETE FROM note_card WHERE id=?").run(id);
+  },
+  deleteMany(ids: string[]): number {
+    if (!ids.length) return 0;
+    const placeholders = ids.map(() => "?").join(",");
+    const r = getDb().prepare(`DELETE FROM note_card WHERE id IN (${placeholders})`).run(...ids);
+    return r.changes;
+  },
+};
+
+export const termLinks = {
+  // 首次出现才写入（ON CONFLICT DO NOTHING），保证首次目标不变。
+  upsertFirst(input: {
+    conversation_id: string;
+    term_text: string;
+    first_card_id: string;
+    first_anchor_id: string | null;
+  }): TermLink {
+    const now = new Date().toISOString();
+    const id = ulid();
+    const key = termKey(input.term_text);
+    getDb()
+      .prepare(
+        "INSERT OR IGNORE INTO term_link (id,conversation_id,term_key,term_text,first_card_id,first_anchor_id,created_at) VALUES (?,?,?,?,?,?,?)",
+      )
+      .run(id, input.conversation_id, key, input.term_text.trim(), input.first_card_id, input.first_anchor_id, now);
+    const r = getDb()
+      .prepare("SELECT * FROM term_link WHERE conversation_id=? AND term_key=?")
+      .get(input.conversation_id, key) as Row | undefined;
+    return r as unknown as TermLink;
+  },
+  listForConversation(conversationId: string): TermLink[] {
+    return getDb()
+      .prepare("SELECT * FROM term_link WHERE conversation_id=? ORDER BY created_at")
+      .all(conversationId) as unknown as TermLink[];
+  },
+  getByKey(conversationId: string, key: string): TermLink | null {
+    const r = getDb().prepare("SELECT * FROM term_link WHERE conversation_id=? AND term_key=?").get(conversationId, key) as Row | undefined;
+    return r ? (r as unknown as TermLink) : null;
+  },
+  // 清掉 first_card_id 已失效的链接（卡片被删后）。
+  deleteStale(conversationId: string): number {
+    const r = getDb()
+      .prepare(
+        "DELETE FROM term_link WHERE conversation_id=? AND NOT EXISTS (SELECT 1 FROM card c WHERE c.id = term_link.first_card_id)",
+      )
+      .run(conversationId);
+    return r.changes;
   },
 };
 

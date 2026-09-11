@@ -33,6 +33,7 @@ export function exportJson(): any {
     "draft",
     "view_state",
     "summary_record",
+    "note_card",
   ];
   const out: any = { version: 1, exported_at: new Date().toISOString(), tables: {} };
   for (const t of tables) {

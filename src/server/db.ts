@@ -36,6 +36,7 @@ export function getDb(): DBType {
   mkdirSync(join(dataDir, "backups"), { recursive: true });
   mkdirSync(join(dataDir, "exports"), { recursive: true });
   mkdirSync(join(dataDir, "logs"), { recursive: true });
+  mkdirSync(join(dataDir, "attachments"), { recursive: true });
   const db = new Database(getDbPath());
   db.pragma("journal_mode = WAL");
   db.pragma("foreign_keys = ON");
