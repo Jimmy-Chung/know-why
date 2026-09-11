@@ -1,0 +1,65 @@
+/* Theme contract. Components consume semantic tokens, never theme-specific colors. */
+:root {
+  color-scheme: light dark;
+  --bg: light-dark(#f5f5f2, #171b19);
+  --surface: light-dark(#ffffff, #212623);
+  --surface-muted: light-dark(#f3f4f1, #292f2b);
+  --sidebar: light-dark(#eeefeb, #1c201d);
+  --text: light-dark(#27312b, #e4e9e5);
+  --muted: light-dark(#737b74, #a0aaa2);
+  --border: light-dark(#e4e7e1, #333c35);
+  --border-strong: light-dark(#cdd4cc, #4b584e);
+  --accent: light-dark(#416551, #a4c8b0);
+  --soft: light-dark(#e3ece3, #2c4033);
+  --button: var(--accent);
+  --button-text: light-dark(#ffffff, #172b1e);
+  --danger: light-dark(#b4483c, #ef9a90);
+  --scrim: light-dark(#1d2b2440, #00000080);
+  --shadow: light-dark(#2034290c, #00000030);
+  --shadow-xs: 0 1px 3px var(--shadow);
+  --shadow-card: 0 8px 32px var(--shadow), 0 1px 3px var(--shadow);
+  --shadow-popover: 0 8px 32px var(--shadow), 0 2px 8px var(--shadow);
+  --shadow-dialog: 0 24px 80px light-dark(#17271e26, #0008);
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent);
+
+  --font-sans: Inter, -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-mono: "SF Mono", Menlo, Consolas, monospace;
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-md: 14px;
+  --text-body: 15px;
+  --text-lg: 16px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+  --leading-body: 1.8;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius: var(--radius-xl);
+  --control-height: 36px;
+  --reading-width: 960px;
+  --card-content-gutter: var(--space-5);
+  --sidebar-width: 248px;
+  --tree-width: 192px;
+  --tree-frame-inset: var(--space-6);
+
+  --motion-fast: 140ms;
+  --motion-panel: 220ms;
+  --motion-scene: 320ms;
+  --ease-out: cubic-bezier(.16, .84, .28, 1);
+  --z-panel: 20;
+  --z-navigation: 30;
+  --tree-edge-size: 24px;
+  --z-dialog: 50;
+  --z-tooltip: 60;
+  --z-popover: 70;
+}

@@ -1,0 +1,35 @@
+.msg-answer { font-size: var(--text-body); line-height: var(--leading-body); position: relative; overflow-wrap: anywhere; min-width: 0; }
+.msg-answer > *:first-child { margin-top: 0; }
+.msg-answer > *:last-child { margin-bottom: 0; }
+.msg-answer p { margin: 0 0 var(--space-4); }
+.msg-answer h1, .msg-answer h2, .msg-answer h3, .msg-answer h4 { margin: var(--space-7) 0 var(--space-3); line-height: 1.45; font-weight: 600; letter-spacing: -.015em; }
+.msg-answer h1 { font-size: var(--text-2xl); }
+.msg-answer h2 { font-size: var(--text-xl); border: 0; padding: 0; }
+.msg-answer h3 { font-size: var(--text-lg); }
+.msg-answer h4 { font-size: var(--text-body); color: var(--text); text-transform: none; letter-spacing: 0; }
+.msg-answer ul, .msg-answer ol { padding-left: 22px; margin: 8px 0 12px; }
+.msg-answer li { margin: var(--space-2) 0; }
+.msg-answer li::marker { color: var(--accent); }
+.msg-answer ul { list-style: disc; }
+.msg-answer ol { list-style: decimal; }
+.msg-answer ul ul, .msg-answer ol ol, .msg-answer ul ol, .msg-answer ol ul { margin: 4px 0 2px; }
+.msg-answer code { background: var(--soft); padding: 1.5px 5px; border-radius: var(--radius-sm); font-size: var(--text-sm); font-family: "SF Mono", "Menlo", "Consolas", monospace; }
+.msg-answer pre { background: var(--soft); padding: 13px 15px; border-radius: var(--radius-md); overflow-x: auto; max-width: 100%; margin: 10px 0 14px; border: 1px solid var(--border); }
+.msg-answer pre code { background: transparent; padding: 0; border: 0; font-size: var(--text-sm); line-height: 1.6; }
+.msg-answer blockquote { position: relative; margin: 10px 0; padding: var(--space-2) var(--space-4) var(--space-2) var(--space-6); border: 0; background: var(--soft); border-radius: var(--radius-md); color: var(--muted); }
+.msg-answer blockquote::before { content: ""; position: absolute; left: var(--space-2); top: var(--space-2); bottom: var(--space-2); width: 3px; border-radius: 999px; background: var(--accent); pointer-events: none; }
+.msg-answer blockquote p { margin: 0; }
+.msg-answer hr { border: 0; border-top: 1px solid var(--border); margin: var(--space-6) 0; }
+.msg-answer strong { font-weight: 650; }
+.msg-answer em { font-style: italic; }
+.msg-answer del { color: var(--muted); }
+.msg-answer a { color: var(--accent); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--accent) 45%, transparent); text-underline-offset: 2px; transition: text-decoration-color .15s; }
+.msg-answer a:hover { text-decoration-color: var(--accent); }
+.msg-answer table { border-collapse: separate; border-spacing: 0; width: fit-content; max-width: 100%; display: block; overflow-x: auto; margin: var(--space-4) 0 var(--space-5); font-size: var(--text-sm); border: 1px solid var(--border); border-radius: var(--radius-md); }
+.msg-answer thead { background: var(--soft); }
+.msg-answer th, .msg-answer td { border: 0; border-bottom: 1px solid var(--border); padding: var(--space-3); text-align: left; min-width: 100px; }
+.msg-answer th { font-weight: 600; white-space: nowrap; }
+.msg-answer tbody tr:nth-child(even) { background: color-mix(in srgb, var(--soft) 50%, transparent); }
+.msg-answer img { max-width: 100%; border-radius: var(--radius-md); }
+
+.msg-answer tr:last-child td { border-bottom: 0; }
