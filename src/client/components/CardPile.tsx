@@ -2,7 +2,7 @@ import { Icon } from "./ui/Icon.js";
 import { Button, IconButton } from "./ui/Button.js";
 import React, { useState, useRef, useCallback, useEffect, useLayoutEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { renderMarkdown } from "../markdown.js";
+import { renderMarkdown, markdownToPlainText } from "../markdown.js";
 import { CopyButton } from "./ui/CopyButton.js";
 import type { Card, Message, SelectionAnchor, TermLink, Conversation, ProviderConfig, Attachment, Source } from "../../shared/types.js";
 import { api } from "../api.js";
@@ -34,6 +34,8 @@ interface CardPileProps {
   onRetry: (runId: string, cardId: string) => void;
   onSaveDraft: (cardId: string, text: string, quoteAnchorId: string | null) => void;
   onSelectCard: SelectCard;
+  pendingScroll?: { cardId: string; messageId: string } | null;
+  onConsumedScroll?: () => void;
 }
 // 层叠卡片：前景水平，背景逐层逆时针旋转+模糊
 // 切换卡片时：旧卡片向左旋转 + 虚化退场（card-exit），新卡片叠到上面（foreground pile-in）
@@ -140,6 +142,8 @@ export function CardPile(props: CardPileProps) {
           activeRuns={props.activeRuns}
           savedScrollTop={cardScrolls.current.get(currentCard.id) ?? null}
           onStickScroll={stickScroll}
+          pendingScroll={props.pendingScroll}
+          onConsumedScroll={props.onConsumedScroll}
         />
       </div>
     </div>
@@ -173,6 +177,9 @@ function CardFace(props: {
   savedScrollTop?: number | null;
   // 滚动时上报当前位置（供切卡时保存）
   onStickScroll?: (cardId: string, top: number) => void;
+  // 助手引用跳转：切到目标卡后滚动并高亮到这条消息
+  pendingScroll?: { cardId: string; messageId: string } | null;
+  onConsumedScroll?: () => void;
 }) {
   const { card, messages, draft, anchors, termLinks, conv, provider, onSendMessage, onCreateAnchor, onExplore, onExploreTerm, onCleanStaleTermLinks, onStop, onRetry, onSaveDraft, activeRuns, onSelectCard, runStatuses } = props;
   const [input, setInput] = useState(draft?.text || "");
@@ -220,6 +227,36 @@ function CardFace(props: {
     if (el && props.savedScrollTop != null) el.scrollTop = props.savedScrollTop;
     if (props.savedScrollTop != null) updateScrollState();
   }, [card.id]); // eslint-disable-line
+
+  // 滚动到指定消息并高亮：特性1（助手引用跳转）与特性2（轮次索引）共用。
+  // highlight=true 时给目标加 .msg-flash 触发高亮动画。
+  const scrollToMessage = useCallback((messageId: string, highlight: boolean) => {
+    const el = messagesRef.current;
+    if (!el) return;
+    const target = el.querySelector<HTMLElement>(`[data-message-id="${CSS.escape(messageId)}"]`);
+    if (!target) return;
+    followBottomRef.current = false;
+    el.scrollTo({ top: target.offsetTop - 80, behavior: "instant" as ScrollBehavior });
+    updateScrollState();
+    if (highlight) {
+      target.classList.remove("msg-flash");
+      // 强制重排以重启动画
+      void target.offsetWidth;
+      target.classList.add("msg-flash");
+    }
+  }, [updateScrollState]);
+
+  // 助手引用跳转：pendingScroll 命中当前卡时，滚动+高亮到目标消息并消费。
+  useEffect(() => {
+    const ps = props.pendingScroll;
+    if (!ps || ps.cardId !== card.id) return;
+    // 消息 DOM 可能要等一帧才挂载
+    const raf = requestAnimationFrame(() => {
+      scrollToMessage(ps.messageId, true);
+      props.onConsumedScroll?.();
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [props.pendingScroll, card.id, scrollToMessage, props.onConsumedScroll]); // eslint-disable-line
 
   // Use the state BEFORE content grows; a large streamed chunk can exceed the bottom threshold.
   useLayoutEffect(() => {
@@ -353,6 +390,7 @@ function CardFace(props: {
         <span>{card.parent_card_id ? "探索分支" : "主卡片"}</span>
       </div>
       <div className="card-messages-region">
+      <RoundRail messages={messages} onJump={(id) => scrollToMessage(id, false)} />
       <div
         className="card-messages"
         ref={messagesRef}
@@ -886,4 +924,80 @@ function QuoteBlock({ anchorId, anchors }: { anchorId: string; anchors: Selectio
       {a.selected_text}
     </div>
   );
+}
+
+// 卡片左侧轮次快速索引：每个圆点代表一轮问答（user 开启，到下一个 user 前）。
+// hover 出简介浮窗，点击滚动到该轮首条消息。仅多于单轮（>=3 条消息）时渲染。
+interface Round {
+  id: string;
+  userId?: string;
+  answerId?: string;
+  qPreview: string;
+  aPreview: string;
+}
+
+const RoundRail = React.memo(function RoundRail({ messages, onJump }: { messages: Message[]; onJump: (messageId: string) => void }) {
+  const [hover, setHover] = useState<{ idx: number; rect: DOMRect } | null>(null);
+  const timer = useRef<number | null>(null);
+  const clear = () => { if (timer.current) { window.clearTimeout(timer.current); timer.current = null; } };
+  const scheduleClose = () => { clear(); timer.current = window.setTimeout(() => setHover(null), 200); };
+
+  const rounds = useMemo<Round[]>(() => {
+    const out: Round[] = [];
+    let cur: Round | null = null;
+    for (const m of messages) {
+      if (m.role === "user") {
+        cur = { id: m.id, userId: m.id, qPreview: preview(m.content, 40), aPreview: "" };
+        out.push(cur);
+      } else if (cur) {
+        if (!cur.answerId) cur.answerId = m.id;
+        if (!cur.aPreview) cur.aPreview = preview(m.content, 60);
+      } else {
+        // 末尾孤立的 assistant（无前置 user）独立成轮
+        cur = { id: m.id, answerId: m.id, qPreview: "", aPreview: preview(m.content, 60) };
+        out.push(cur);
+      }
+    }
+    return out;
+  }, [messages]);
+
+  if (rounds.length < 2) return null;
+
+  return (
+    <div className="card-round-rail" aria-label="轮次快速索引">
+      {rounds.map((r, i) => (
+        <button
+          key={r.id}
+          type="button"
+          className="card-round-dot"
+          aria-label={`第 ${i + 1} 轮`}
+          onMouseEnter={(e) => { clear(); setHover({ idx: i, rect: e.currentTarget.getBoundingClientRect() }); }}
+          onMouseLeave={scheduleClose}
+          onClick={() => onJump(r.userId || r.answerId || r.id)}
+        />
+      ))}
+      {hover && createPortal(
+        <div
+          className="round-popover"
+          style={{
+            position: "fixed",
+            top: Math.max(8, hover.rect.top),
+            left: hover.rect.right + 8,
+            zIndex: 1000,
+          }}
+          onMouseEnter={clear}
+          onMouseLeave={scheduleClose}
+        >
+          {rounds[hover.idx]!.qPreview && <div className="round-popover-q">{rounds[hover.idx]!.qPreview}</div>}
+          {rounds[hover.idx]!.aPreview && <div className="round-popover-a">{rounds[hover.idx]!.aPreview}</div>}
+        </div>,
+        document.body,
+      )}
+    </div>
+  );
+});
+
+function preview(md: string, n: number): string {
+  const t = markdownToPlainText(md).replace(/\s+/g, " ").trim();
+  return t.length > n ? t.slice(0, n) + "…" : t;
 }

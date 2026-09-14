@@ -205,14 +205,23 @@ function candidate(row: PassageRow, score: number): Candidate {
     startOffset:row.start_offset,endOffset:row.end_offset,score };
 }
 
-export async function retrievePassages(conversationId: string, question: string, limit = 40, signal?: AbortSignal): Promise<SearchResult> {
+export async function retrievePassages(conversationId: string, question: string, limit = 40, signal?: AbortSignal, scopeCardIds?: string[] | null): Promise<SearchResult> {
   signal?.throwIfAborted();
   indexConversation(conversationId); // also upgrades old sessions lazily, without modifying source history
   const db = getDb();
   const conv = repo.conversations.get(conversationId);
   if (!conv || conv.deleted_at) return { candidates:[],cacheHit:false,semanticReady:false,revision:"missing" };
+  // 作用域：@ 指定的卡片集合。校验归属本会话后取交集；空/非法 → 全会话（null）。
+  let scope: Set<string> | null = null;
+  if (scopeCardIds && scopeCardIds.length) {
+    const convCards = new Set(repo.cards.listForConversation(conversationId).map(c => c.id));
+    const filtered = scopeCardIds.filter(id => convCards.has(id));
+    if (filtered.length) scope = new Set(filtered);
+  }
+  const scopeClause = scope && scope.size ? `AND p.card_id IN (${[...scope].map(() => "?").join(",")})` : "";
+  const scopeParams = scope && scope.size ? [...scope] : [];
   const state = db.prepare("SELECT * FROM knowledge_index_state WHERE conversation_id=?").get(conversationId) as { revision:number; vector_revision:number };
-  const revision = `${state.revision}:${state.vector_revision}`;
+  const revision = `${state.revision}:${state.vector_revision}:${scope ? [...scope].sort().join(",") : "all"}`;
   const semanticReady = await embeddingAvailable();
   signal?.throwIfAborted();
   const key = JSON.stringify([getDbPath(),conversationId,revision,semanticReady,question,limit]);
@@ -227,7 +236,7 @@ export async function retrievePassages(conversationId: string, question: string,
   if (terms.length) {
     const query = terms.map(t => `"${t}"`).join(" OR ");
     add(db.prepare(`SELECT p.* FROM knowledge_passage_fts f JOIN knowledge_passage p ON p.id=f.rowid
-      WHERE knowledge_passage_fts MATCH ? AND p.conversation_id=? ORDER BY rank LIMIT 60`).all(query,conversationId) as PassageRow[]);
+      WHERE knowledge_passage_fts MATCH ? AND p.conversation_id=? ${scopeClause} ORDER BY rank LIMIT 60`).all(query,conversationId,...scopeParams) as PassageRow[]);
   }
   // Topic boosts are bounded, and never supply messages from outside this conversation.
   const topics = db.prepare("SELECT title,aliases,card_ids FROM knowledge_topic WHERE conversation_id=?").all(conversationId) as any[];
@@ -238,14 +247,16 @@ export async function retrievePassages(conversationId: string, question: string,
     if (names.some((n:string)=>n && q.includes(n.toLowerCase()))) for (const id of JSON.parse(topic.card_ids)) titleIds.add(id);
   }
   for (const c of repo.cards.listForConversation(conversationId)) if (c.title && c.parent_card_id && q.includes(c.title.toLowerCase())) titleIds.add(c.id);
+  // 作用域限定：topic/title 命中的卡片必须也在 scope 内
+  if (scope) for (const id of [...titleIds]) if (!scope.has(id)) titleIds.delete(id);
   for (const id of titleIds) {
     add(db.prepare("SELECT * FROM knowledge_passage WHERE conversation_id=? AND card_id=? ORDER BY ordinal,id LIMIT 12").all(conversationId,id) as PassageRow[],.6);
   }
   if (isOverview(question)) {
     const representatives = db.prepare(`SELECT * FROM (
       SELECT p.*, ROW_NUMBER() OVER(PARTITION BY card_id ORDER BY CASE role WHEN 'assistant' THEN 0 ELSE 1 END, created_at DESC, ordinal) AS position
-      FROM knowledge_passage p WHERE conversation_id=?
-    ) WHERE position=1 ORDER BY created_at DESC LIMIT 40`).all(conversationId) as PassageRow[];
+      FROM knowledge_passage p WHERE p.conversation_id=? ${scopeClause}
+    ) WHERE position=1 ORDER BY created_at DESC LIMIT 40`).all(conversationId,...scopeParams) as PassageRow[];
     add(representatives,1.2);
   }
   // Semantic retrieval always competes with lexical retrieval, rather than only filling empty slots.
@@ -254,7 +265,7 @@ export async function retrievePassages(conversationId: string, question: string,
       const qVec = await embedQuery(question);
       signal?.throwIfAborted();
       const rows = db.prepare(`SELECT p.*,v.embedding,v.dim FROM knowledge_passage p JOIN knowledge_passage_vector v ON p.id=v.passage_id
-        WHERE p.conversation_id=? AND v.model=?`).all(conversationId,EMBEDDING_MODEL) as (PassageRow & {embedding:Buffer; dim:number})[];
+        WHERE p.conversation_id=? AND v.model=? ${scopeClause}`).all(conversationId,EMBEDDING_MODEL,...scopeParams) as (PassageRow & {embedding:Buffer; dim:number})[];
       const sorted = rows.filter(r=>r.dim === qVec.length).map(row=>({row,score:dot(qVec,fromBlob(row.embedding,row.dim))}))
         .filter(r=>r.score>=.3).sort((a,b)=>b.score-a.score).slice(0,60);
       add(sorted.map(r=>r.row));

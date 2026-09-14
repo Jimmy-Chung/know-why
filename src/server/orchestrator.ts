@@ -670,6 +670,7 @@ export async function runAssistant(params: {
   question: string;
   thread_id?: string | null;
   quote?: string | null;
+  scope_card_ids?: string[] | null;
   idempotency_key?: string;
 }): Promise<{ userMsgId: string; runId: string }> {
   const conv = repo.conversations.get(params.conversation_id);
@@ -679,7 +680,9 @@ export async function runAssistant(params: {
 
   if (typeof params.question !== "string" || !params.question.trim()) throw new Error("请输入问题");
   const threadKey = params.thread_id || "default";
-  const idem = params.idempotency_key || `assistant:${params.conversation_id}:${threadKey}:${hash(params.question)}`;
+  // 作用域参与幂等键：不同 @ 范围视为不同提问
+  const scopeKey = params.scope_card_ids && params.scope_card_ids.length ? [...params.scope_card_ids].sort().join(",") : "all";
+  const idem = params.idempotency_key || `assistant:${params.conversation_id}:${threadKey}:${scopeKey}:${hash(params.question)}`;
   const existing = repo.runs.getByIdem(idem);
   if (existing && existing.status !== "failed") {
     return { userMsgId: repo.assistant.list(conv.id).find(m => m.run_id === existing.id && m.role === "user")?.id || "", runId: existing.id };
@@ -696,6 +699,7 @@ export async function runAssistant(params: {
       evidence: [],
       thread_id: params.thread_id ?? null,
       quote: params.quote ?? null,
+      scope_card_ids: params.scope_card_ids ?? null,
     });
     const r = repo.runs.create({
       conversation_id: conv.id,
@@ -724,11 +728,11 @@ export function startAssistantRunIfPending(runId: string): boolean {
   if (!conv) return false;
   const user = repo.assistant.list(conv.id).find(m => m.run_id === runId && m.role === "user");
   if (!user) { handleRunError(run, new Error("助手提问记录不存在，请重新提问。")); return false; }
-  void executeAssistant(conv, run, user.content, user.thread_id, user.id, user.quote ?? null);
+  void executeAssistant(conv, run, user.content, user.thread_id, user.id, user.quote ?? null, user.scope_card_ids ?? null);
   return true;
 }
 
-async function executeAssistant(conv: Conversation, run: Run, question: string, threadId: string | null, userMessageId: string, quote: string | null): Promise<void> {
+async function executeAssistant(conv: Conversation, run: Run, question: string, threadId: string | null, userMessageId: string, quote: string | null, scopeCardIds: string[] | null): Promise<void> {
   const controller = new AbortController();
   activeControllers.set(run.id, controller);
   touchRun(run.id);
@@ -745,7 +749,7 @@ async function executeAssistant(conv: Conversation, run: Run, question: string, 
     const history = assistantHistory(repo.assistant.list(conv.id),threadId,userMessageId);
     buildRagRequest(question,history,[],provider.capabilities?.context_window || 32000,quote); // reject oversized questions before embedding
     const query = retrievalQuestion(question,history);
-    const found = await retrievePassages(conv.id,query,40,controller.signal);
+    const found = await retrievePassages(conv.id,query,40,controller.signal,scopeCardIds);
     controller.signal.throwIfAborted();
     // Backfill old sessions without delaying this keyword-based answer.
     void indexEmbeddings(conv.id).catch(() => {});

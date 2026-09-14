@@ -147,3 +147,64 @@
 .ghost-content i:nth-child(3n) { width: 66%; }
 
 .copy-btn { color: var(--muted); background: transparent; border-color: transparent; font-weight: 400; }
+
+/* ---- 引用跳转高亮（特性1）---- */
+@keyframes msg-flash {
+  0% { background: color-mix(in srgb, var(--accent) 30%, transparent); }
+  60% { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+  100% { background: transparent; }
+}
+.msg-flash { animation: msg-flash 1.4s var(--ease-out); border-radius: var(--radius-sm); }
+
+/* ---- 卡片左侧轮次快速索引（特性2）---- */
+.card-round-rail {
+  position: absolute; top: var(--space-4); bottom: var(--space-4); left: 6px;
+  z-index: 2; display: flex; flex-direction: column; gap: 10px;
+  width: 6px; pointer-events: auto;
+}
+.card-round-dot {
+  width: 6px; height: 6px; padding: 0; border: 0; border-radius: 50%;
+  background: var(--border-strong); cursor: pointer; flex-shrink: 0;
+  transition: background .15s, transform .15s;
+}
+.card-round-dot:hover { background: var(--accent); transform: scale(1.4); }
+.round-popover {
+  max-width: 260px; padding: 8px 10px; background: var(--text); color: var(--surface);
+  border-radius: var(--radius-sm); box-shadow: var(--shadow-popover); font-size: var(--text-xs);
+  line-height: 1.5; pointer-events: auto;
+}
+.round-popover-q { font-weight: 600; margin-bottom: 4px; }
+.round-popover-a { opacity: .85; }
+@media (max-width: 700px) { .card-round-rail { left: 3px; } }
+
+/* ---- 助手 @ 作用域 chip + picker（特性3）---- */
+.scope-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.scope-chips--readonly { margin-bottom: 6px; }
+.scope-chip {
+  display: inline-flex; align-items: center; gap: 4px; max-width: 100%;
+  padding: 2px 4px 2px 8px; background: var(--soft); color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+  border-radius: var(--radius-full, 999px); font-size: var(--text-xs);
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+.scope-chip .scope-chip-label { overflow: hidden; text-overflow: ellipsis; }
+.scope-chip-remove {
+  border: 0; background: transparent; color: var(--muted); font-size: 14px;
+  line-height: 1; padding: 0 4px; cursor: pointer; border-radius: 50%;
+}
+.scope-chip-remove:hover { color: var(--danger); }
+.mention-picker {
+  min-width: 200px; max-width: 280px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--radius-md);
+  box-shadow: var(--shadow-popover); padding: 4px; overflow: hidden;
+}
+.mention-item {
+  display: flex; align-items: center; gap: 6px; width: 100%; padding: 6px 8px;
+  border: 0; background: transparent; color: var(--text); font-size: var(--text-sm);
+  text-align: left; cursor: pointer; border-radius: var(--radius-sm);
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+.mention-item .ui-icon { flex-shrink: 0; color: var(--muted); }
+.mention-item.active, .mention-item:hover { background: var(--soft); }
+.mention-item.active .ui-icon { color: var(--accent); }
+

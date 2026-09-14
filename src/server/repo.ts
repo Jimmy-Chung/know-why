@@ -832,6 +832,7 @@ export const assistant = {
         run_status: r.run_status ?? undefined,
         thread_id: r.thread_id ?? null,
         quote: r.quote ?? null,
+        scope_card_ids: r.scope_card_ids ? JSON.parse(r.scope_card_ids) : null,
         created_at: r.created_at,
       }));
   },
@@ -844,14 +845,15 @@ export const assistant = {
     run_id?: string | null;
     thread_id?: string | null;
     quote?: string | null;
+    scope_card_ids?: string[] | null;
   }): KnowledgeAssistantMessage {
     const id = ulid();
     const now = new Date().toISOString();
     getDb()
       .prepare(
-        "INSERT INTO knowledge_assistant_message (id,conversation_id,role,content,evidence,run_id,thread_id,created_at,status,quote) VALUES (?,?,?,?,?,?,?,?,?,?)",
+        "INSERT INTO knowledge_assistant_message (id,conversation_id,role,content,evidence,run_id,thread_id,created_at,status,quote,scope_card_ids) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
       )
-      .run(id, input.conversation_id, input.role, input.content, JSON.stringify(input.evidence), input.run_id ?? null, input.thread_id ?? null, now, input.status ?? "complete", input.quote ?? null);
+      .run(id, input.conversation_id, input.role, input.content, JSON.stringify(input.evidence), input.run_id ?? null, input.thread_id ?? null, now, input.status ?? "complete", input.quote ?? null, input.scope_card_ids ? JSON.stringify(input.scope_card_ids) : null);
     return {
       id,
       conversation_id: input.conversation_id,
@@ -862,6 +864,7 @@ export const assistant = {
       run_id: input.run_id ?? null,
       thread_id: input.thread_id ?? null,
       quote: input.quote ?? null,
+      scope_card_ids: input.scope_card_ids ?? null,
       created_at: now,
     };
   },
