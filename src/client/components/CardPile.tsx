@@ -1,5 +1,6 @@
 import { Icon } from "./ui/Icon.js";
 import { Button, IconButton } from "./ui/Button.js";
+import { Tooltip } from "./ui/Tooltip.js";
 import React, { useState, useRef, useCallback, useEffect, useLayoutEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { renderMarkdown, markdownToPlainText } from "../markdown.js";
@@ -474,7 +475,7 @@ function CardFace(props: {
             <Button variant="ghost" className="attach-btn" onClick={handlePickFile} disabled={uploading} icon="attachment" title="上传附件">{uploading ? "上传中…" : "附件"}</Button>
             {props.composerControls}
           </div>
-          <Button variant="primary" className="send-btn" icon="arrowUp" aria-label="发送" title="发送" onClick={handleSend} disabled={props.settingsPending || (!input.trim() && !pendingQuote && attachments.length === 0)} />
+          <Tooltip content="发送"><Button variant="primary" className="send-btn" icon="arrowUp" aria-label="发送" onClick={handleSend} disabled={props.settingsPending || (!input.trim() && !pendingQuote && attachments.length === 0)} /></Tooltip>
         </div>
         {props.settingsNote && <div className="composer-settings-note" role="status">{props.settingsNote}</div>}
       </div>

@@ -25,3 +25,15 @@
 .arco-btn-primary:not(.arco-btn-status-danger) { background: var(--button); color: var(--button-text); }
 
 .copy-btn { min-height: 28px; padding: var(--space-1) var(--space-2); font-size: var(--text-xs); }
+
+/* 共享 Tooltip（@floating-ui/react）：反色小气泡，比系统 title 更快更可控。 */
+.kk-tooltip {
+  z-index: var(--z-tooltip);
+  max-width: 220px; padding: 4px 8px;
+  background: var(--text); color: var(--surface);
+  border-radius: var(--radius-sm); box-shadow: var(--shadow-popover);
+  font-size: var(--text-xs); line-height: 1.45;
+  pointer-events: none; white-space: normal;
+  animation: kk-tooltip-in var(--motion-fast) var(--ease-out) both;
+}
+@keyframes kk-tooltip-in { from { opacity: 0; } to { opacity: 1; } }
