@@ -406,22 +406,32 @@ export function AssistantPanel({ conv, provider, messages, cards, allMessages, c
               <Button variant="primary" className="send-btn" icon="arrowUp" aria-label="提问" title="提问" onClick={handleSend} disabled={!input.trim() || loading} />
             </div>
           </div>
-          {picker && pickerCards.length > 0 && createPortal(
-            <div className="mention-picker" style={{ position: "fixed", top: picker.rect.bottom + 4, left: picker.rect.left, zIndex: 1000 }}>
-              {pickerCards.map((c, i) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  className={"mention-item" + (i === picker.idx ? " active" : "")}
-                  onMouseEnter={() => setPicker((p) => p ? { ...p, idx: i } : p)}
-                  onClick={() => addScopeCard(c.id)}
-                >
-                  <Icon name="cards" /><span>{c.title || "主卡片"}</span>
-                </button>
-              ))}
-            </div>,
-            document.body,
-          )}
+          {picker && pickerCards.length > 0 && (() => {
+            // 智能定位：textarea 在面板底部 composer 区，向下空间常不足；
+            // 下方放不下时改向上展开，并限高滚动，避免 picker 超出视口被裁剪。
+            const PICKER_MAX = 260; const gap = 4;
+            const below = window.innerHeight - picker.rect.bottom - gap;
+            const above = picker.rect.top - gap;
+            const placeAbove = below < 180 && above > below;
+            const maxH = Math.min(placeAbove ? above : below, PICKER_MAX);
+            const left = Math.max(8, Math.min(picker.rect.left, window.innerWidth - 240));
+            return createPortal(
+              <div className="mention-picker" style={{ position: "fixed", top: placeAbove ? picker.rect.top - gap - maxH : picker.rect.bottom + gap, left, maxHeight: maxH, overflowY: "auto", zIndex: 1000 }}>
+                {pickerCards.map((c, i) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    className={"mention-item" + (i === picker.idx ? " active" : "")}
+                    onMouseEnter={() => setPicker((p) => p ? { ...p, idx: i } : p)}
+                    onClick={() => addScopeCard(c.id)}
+                  >
+                    <Icon name="cards" /><span>{c.title || "主卡片"}</span>
+                  </button>
+                ))}
+              </div>,
+              document.body,
+            );
+          })()}
         </>
       )}
       {selection && createPortal(
