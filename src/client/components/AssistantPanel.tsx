@@ -1,5 +1,6 @@
 import { Icon } from "./ui/Icon.js";
 import { Button, IconButton } from "./ui/Button.js";
+import { Tooltip } from "./ui/Tooltip.js";
 import { CopyButton } from "./ui/CopyButton.js";
 import React, { useState, useRef, useEffect, useMemo, useLayoutEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
@@ -329,7 +330,7 @@ export function AssistantPanel({ conv, provider, messages, cards, allMessages, c
 
   return (
     <aside className={`assistant-panel${closing ? " assistant-panel--closing" : ""}`} aria-hidden={closing || undefined} {...{ inert: closing ? "" : undefined }} aria-label="会话知识助手" style={{ "--assistant-width": `${width}px` } as React.CSSProperties}>
-      <div className="assistant-resize-handle" onMouseDown={startResize} title="拖动调整宽度" />
+      <Tooltip content="拖动调整宽度" placement="right"><div className="assistant-resize-handle" onMouseDown={startResize} /></Tooltip>
       <div className="assistant-header">
         <div className="assistant-header-title">
           <h2><Icon name="assistant" />会话知识助手</h2>
@@ -403,7 +404,7 @@ export function AssistantPanel({ conv, provider, messages, cards, allMessages, c
             />
             <div className="composer-bottom">
               <span>不使用模型外部知识</span>
-              <Button variant="primary" className="send-btn" icon="arrowUp" aria-label="提问" title="提问" onClick={handleSend} disabled={!input.trim() || loading} />
+              <Tooltip content="提问"><Button variant="primary" className="send-btn" icon="arrowUp" aria-label="提问" onClick={handleSend} disabled={!input.trim() || loading} /></Tooltip>
             </div>
           </div>
           {picker && pickerCards.length > 0 && (() => {

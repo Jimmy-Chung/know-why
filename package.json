@@ -1,6 +1,6 @@
 {
   "name": "know-know",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "private": true,
   "description": "Know Know — 以知识探索分支组织对话的个人本机 AI 应用（1.0，无登录）",
   "type": "module",
@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@arco-design/web-react": "^2.66.16",
+    "@floating-ui/react": "^0.27.20",
     "@hono/node-server": "^1.13.0",
     "@hono/zod-validator": "^0.4.1",
     "@huggingface/transformers": "^4.2.0",

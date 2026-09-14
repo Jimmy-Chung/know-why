@@ -107,9 +107,9 @@ export function TreePanel({ cards, currentCardId, onSelect, collapsed, reference
           <div className="tree-panel-canvas">
             <TreeView layout={layout} currentCardId={currentCardId} onSelect={onSelect} compact zoom={zoom} focusSignal={focusSignal} showEdges={!expanded} centerWholeTree={focusSignal === 0} reference={reference} />
             {expanded && <div className="tree-zoom-controls" role="toolbar" aria-label="分支树缩放">
-              <IconButton className="tree-zoom-btn" icon="zoomOut" label="缩小" title="缩小" disabled={zoom <= ZOOM_MIN} onClick={() => setZoom((z) => Math.max(ZOOM_MIN, z - ZOOM_STEP))} />
-              <IconButton className="tree-zoom-btn" icon="focus" label="聚焦当前卡片" title="聚焦当前卡片" onClick={() => { setFocusSignal((v) => v + 1); setZoom(1); }} />
-              <IconButton className="tree-zoom-btn" icon="zoomIn" label="放大" title="放大" disabled={zoom >= ZOOM_MAX} onClick={() => setZoom((z) => Math.min(ZOOM_MAX, z + ZOOM_STEP))} />
+              <IconButton className="tree-zoom-btn" icon="zoomOut" label="缩小" disabled={zoom <= ZOOM_MIN} onClick={() => setZoom((z) => Math.max(ZOOM_MIN, z - ZOOM_STEP))} />
+              <IconButton className="tree-zoom-btn" icon="focus" label="聚焦当前卡片" onClick={() => { setFocusSignal((v) => v + 1); setZoom(1); }} />
+              <IconButton className="tree-zoom-btn" icon="zoomIn" label="放大" disabled={zoom >= ZOOM_MAX} onClick={() => setZoom((z) => Math.min(ZOOM_MAX, z + ZOOM_STEP))} />
             </div>}
           </div>
     </aside>
