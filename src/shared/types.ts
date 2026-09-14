@@ -240,6 +240,7 @@ export interface KnowledgeAssistantMessage {
   run_status?: RunStatus;
   thread_id: string | null;
   quote?: string | null; // user 消息携带的引用原文（选中助手回答片段）
+  scope_card_ids?: string[] | null; // user 消息：@ 指定的检索作用域卡片集合（并集）；null/空=全会话
   created_at: string;
 }
 

@@ -650,7 +650,7 @@ app.get("/api/conversations/:id/assistant", (c) => c.json(repo.assistant.list(c.
 
 app.post("/api/conversations/:id/assistant", async (c) => {
   const body = await c.req.json();
-  const r = await runAssistant({ conversation_id: c.req.param("id"), question: body.question, thread_id: body.thread_id ?? null, quote: body.quote ?? null, idempotency_key: body.idempotency_key });
+  const r = await runAssistant({ conversation_id: c.req.param("id"), question: body.question, thread_id: body.thread_id ?? null, quote: body.quote ?? null, scope_card_ids: Array.isArray(body.scope_card_ids) ? body.scope_card_ids : null, idempotency_key: body.idempotency_key });
   return c.json(r);
 });
 
