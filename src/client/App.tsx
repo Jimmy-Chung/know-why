@@ -46,6 +46,8 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [previewCardId, setPreviewCardId] = useState<string | null>(null);
+  // 助手引用跳转：切卡后滚动并高亮到该回答消息
+  const [pendingScroll, setPendingScroll] = useState<{ cardId: string; messageId: string } | null>(null);
   const [activeRuns, setActiveRuns] = useState<Set<string>>(new Set());
   // run 中间态文本：runId → 状态描述（如"规划搜索…""正在搜索(Tavily)…""思考中…"）
   const [runStatuses, setRunStatuses] = useState<Record<string, string>>({});
@@ -336,6 +338,14 @@ export default function App() {
     api.saveViewState(currentId, cardId, 0).catch(() => {});
   }, [currentId]);
 
+  // 助手引用角标点击：切到目标卡（若非当前卡），并登记待滚动到的那条消息
+  const handleGoToMessage = useCallback((cardId: string, messageId: string) => {
+    setPreviewCardId(null);
+    setActiveTab("chat");
+    if (currentCardId !== cardId) setCurrentCardId(cardId);
+    setPendingScroll({ cardId, messageId });
+  }, [currentCardId]);
+
   return (
     <div className={`app${sidebarCollapsed ? " sidebar-collapsed" : ""}`}>
       <IconButton className="navigation-toggle" icon="panel" label={sidebarCollapsed ? "展开会话导航" : "收起会话导航"} aria-expanded={!sidebarCollapsed} aria-controls="session-navigation" onClick={() => setSidebarCollapsed(v => !v)} />
@@ -393,6 +403,9 @@ export default function App() {
           onToggleAssistant={() => setAssistantOpen((v) => !v)}
           previewCardId={previewCardId}
           onPreviewCard={setPreviewCardId}
+          pendingScroll={pendingScroll}
+          onGoToMessage={handleGoToMessage}
+          onConsumedScroll={() => setPendingScroll(null)}
         />
       ) : (
         <div className="workspace">

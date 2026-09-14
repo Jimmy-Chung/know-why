@@ -166,8 +166,8 @@ export const api = {
     fetch(`${BASE}/conversations/${convId}/viewstate`, { method: "PUT", headers: ct(), body: JSON.stringify({ current_card_id: cardId, scroll_position: scroll }) }).then(j<any>),
 
   // Assistant
-  sendAssistant: (convId: string, question: string, threadId?: string | null, quote?: string | null) =>
-    fetch(`${BASE}/conversations/${convId}/assistant`, { method: "POST", headers: ct(), body: JSON.stringify({ question, thread_id: threadId ?? null, quote: quote ?? null, idempotency_key: crypto.randomUUID() }) }).then(j<{ userMsgId: string; runId: string }>),
+  sendAssistant: (convId: string, question: string, threadId?: string | null, quote?: string | null, scopeCardIds?: string[] | null) =>
+    fetch(`${BASE}/conversations/${convId}/assistant`, { method: "POST", headers: ct(), body: JSON.stringify({ question, thread_id: threadId ?? null, quote: quote ?? null, scope_card_ids: scopeCardIds && scopeCardIds.length ? scopeCardIds : null, idempotency_key: crypto.randomUUID() }) }).then(j<{ userMsgId: string; runId: string }>),
 
   // Notes
   listNotes: (convId: string) => fetch(`${BASE}/conversations/${convId}/notes`).then(j<NoteCard[]>),

@@ -16,8 +16,8 @@ interface AssistantPanelProps {
   allMessages: Record<string, Message[]>;
   currentThreadId: string | null;
   onSetCurrentThreadId: (id: string | null) => void;
-  onSendAssistant: (question: string, threadId: string | null, quote?: string | null) => Promise<{ userMsgId: string; runId: string }>;
-  onGoToCard: (cardId: string) => void;
+  onSendAssistant: (question: string, threadId: string | null, quote?: string | null, scopeCardIds?: string[] | null) => Promise<{ userMsgId: string; runId: string }>;
+  onGoToMessage: (cardId: string, messageId: string) => void;
   onNewNote: (content: string) => void;
   onClose: () => void;
 }
@@ -30,7 +30,7 @@ function threadTitle(msgs: KnowledgeAssistantMessage[]): string {
   return t.length > 16 ? t.slice(0, 16) + "…" : t || "问答";
 }
 
-export function AssistantPanel({ conv, provider, messages, cards, allMessages, currentThreadId, onSetCurrentThreadId, onSendAssistant, onGoToCard, onNewNote, onClose, closing = false }: AssistantPanelProps) {
+export function AssistantPanel({ conv, provider, messages, cards, allMessages, currentThreadId, onSetCurrentThreadId, onSendAssistant, onGoToMessage, onNewNote, onClose, closing = false }: AssistantPanelProps) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [statusText, setStatusText] = useState("正在查找相关对话……");
@@ -48,6 +48,10 @@ export function AssistantPanel({ conv, provider, messages, cards, allMessages, c
   // 选中助手回答片段 → 引用到提问：选区定位 + 待发送引用
   const [selection, setSelection] = useState<{ messageId: string; text: string; rect: DOMRect } | null>(null);
   const [pendingQuote, setPendingQuote] = useState<string | null>(null);
+  // @ 作用域：用户可选若干卡片，本次提问的检索只在这些卡范围内进行
+  const [scopeCardIds, setScopeCardIds] = useState<string[]>([]);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [picker, setPicker] = useState<{ query: string; idx: number; rect: DOMRect } | null>(null);
 
   // 拖拽左边缘调整宽度
   const startResize = (e: React.MouseEvent) => {
@@ -161,6 +165,18 @@ export function AssistantPanel({ conv, provider, messages, cards, allMessages, c
     onSetCurrentThreadId(crypto.randomUUID());
   };
 
+  // @ picker 点击外部关闭（mousedown 在 textarea 与 picker 之外才关）
+  useEffect(() => {
+    if (!picker) return;
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as HTMLElement;
+      if (t.closest(".mention-picker") || t === textareaRef.current) return;
+      setPicker(null);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [picker]);
+
   // 选区处理：在助手回答内选取文本 → 引用。仅 assistant 消息可引用
   const handleSelection = useCallback(() => {
     const sel = window.getSelection();
@@ -202,31 +218,105 @@ export function AssistantPanel({ conv, provider, messages, cards, allMessages, c
 
   const handleRemoveQuote = useCallback(() => setPendingQuote(null), []);
 
+  // @ 选择器候选：本会话所有卡片，过滤已选，按 title 模糊匹配
+  const pickerCards = useMemo(() => {
+    if (!picker) return [];
+    const q = picker.query.toLowerCase();
+    return cards
+      .filter((c) => !scopeCardIds.includes(c.id))
+      .filter((c) => !q || (c.title || "主卡片").toLowerCase().includes(q))
+      .slice(0, 8);
+  }, [picker, cards, scopeCardIds]);
+
+  const addScopeCard = useCallback((cardId: string) => {
+    setScopeCardIds((prev) => (prev.includes(cardId) ? prev : [...prev, cardId]));
+    setPicker(null);
+    // 焦点回到输入框末尾
+    requestAnimationFrame(() => {
+      const ta = textareaRef.current;
+      if (ta) { ta.focus(); const end = ta.value.length; ta.setSelectionRange(end, end); }
+    });
+  }, []);
+
+  const removeScopeCard = useCallback((cardId: string) => {
+    setScopeCardIds((prev) => prev.filter((id) => id !== cardId));
+  }, []);
+
+  // 输入变化：检测光标前刚输入的 @（前一个字符为空格或行首，或为首个字符）
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const v = e.target.value;
+    setInput(v);
+    const ta = e.target;
+    const pos = ta.selectionStart;
+    // 找光标前最近的 @，且它与光标之间无空白
+    const before = v.slice(0, pos);
+    const atIdx = before.lastIndexOf("@");
+    if (atIdx >= 0) {
+      const segment = before.slice(atIdx + 1);
+      const prevChar = atIdx > 0 ? before[atIdx - 1] ?? "" : "";
+      const atBoundary = atIdx === 0 || /\s/.test(prevChar);
+      // 输入了 @ 且其后到光标无空白 → 打开 picker；否则关闭
+      if (atBoundary && !/\s/.test(segment) && segment.length <= 40) {
+        const rect = ta.getBoundingClientRect();
+        setPicker({ query: segment, idx: 0, rect });
+        return;
+      }
+    }
+    setPicker(null);
+  }, []);
+
+  const handlePickerKey = useCallback((e: React.KeyboardEvent) => {
+    if (!picker) return;
+    if (e.key === "ArrowDown") { e.preventDefault(); setPicker((p) => p ? { ...p, idx: Math.min(pickerCards.length - 1, p.idx + 1) } : p); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setPicker((p) => p ? { ...p, idx: Math.max(0, p.idx - 1) } : p); }
+    else if (e.key === "Enter") { e.preventDefault(); const c = pickerCards[picker.idx]; if (c) addScopeCard(c.id); }
+    else if (e.key === "Escape") { e.preventDefault(); setPicker(null); }
+  }, [picker, pickerCards, addScopeCard]);
+
+  // Backspace 在输入框空且无 picker 时，删除最后一个 scope chip
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (picker) { handlePickerKey(e); return; }
+    if (e.key === "Backspace" && input === "" && scopeCardIds.length > 0) {
+      e.preventDefault();
+      setScopeCardIds((prev) => prev.slice(0, -1));
+      return;
+    }
+    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+      e.preventDefault();
+      handleSend();
+    }
+  }, [picker, input, scopeCardIds.length, handlePickerKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleSend = async () => {
     if (!input.trim() || loading) return;
     const question = input.trim();
     const quote = pendingQuote;
+    const scope = scopeCardIds.length ? [...scopeCardIds] : null;
     const threadId = currentThreadId;
     const questionCreatedAt = new Date().toISOString();
     setLoading(true);
     setInput("");
     setPendingQuote(null);
+    setScopeCardIds([]);
+    setPicker(null);
     setSendError("");
     setStatusText("正在查找相关对话……");
     setSendingThread(threadId);
     try {
-      const r = await onSendAssistant(question, threadId, quote);
+      const r = await onSendAssistant(question, threadId, quote, scope);
       if(!mountedRef.current){window.dispatchEvent(new CustomEvent("kk-reload-conversation",{detail:conv.id}));return;}
       connectRun(r.runId,threadId);
       if (r.userMsgId) setOptimistic(prev => [...prev.filter(m=>m.id!==r.userMsgId),{
         id:r.userMsgId,conversation_id:conv.id,role:"user",content:question,evidence:[],
         run_id:r.runId,thread_id:threadId,created_at:questionCreatedAt,status:"complete",quote,
+        scope_card_ids:scope,
       }]);
     } catch(error) {
       setLoading(false);
       setRunId(null);
       setInput(question);
       setPendingQuote(quote);
+      setScopeCardIds(scope || []);
       setSendError(error instanceof Error?error.message:"提问失败，请重试。");
     }
   };
@@ -251,8 +341,8 @@ export function AssistantPanel({ conv, provider, messages, cards, allMessages, c
           <IconButton onClick={onClose} icon="close" label="关闭助手" />
         </div>
       </div>
-      <div className="assistant-scope" title={`检索范围：当前会话「${conv.title}」的全部分支`}>
-        <Icon name="branch" /><span>本会话 · 全部分支</span><span>不联网</span>
+      <div className="assistant-scope" title={scopeCardIds.length ? `检索范围：${scopeCardIds.length} 张指定卡片` : `检索范围：当前会话「${conv.title}」的全部分支`}>
+        <Icon name="branch" /><span>{scopeCardIds.length ? `已限定 ${scopeCardIds.length} 张卡片` : "本会话 · 全部分支"}</span><span>不联网</span>
       </div>
       {showHistory ? (
         // 历史列表展开时：取代主区，只列线程标题；点击即打开该问答到主区并收起列表
@@ -279,7 +369,7 @@ export function AssistantPanel({ conv, provider, messages, cards, allMessages, c
           <div className="assistant-body" ref={bodyRef} onMouseUp={handleSelection} onKeyUp={handleSelection}>
             {currentMsgs.length === 0 && <p className="assistant-empty">{currentThreadId ? "新建问答线程，输入你的问题。" : "问问我刚才探索过哪些概念？或是比较两个分支的内容。"}</p>}
             {currentMsgs.map((m) => (
-              <AssistantMessageView key={m.id} message={m} cards={cards} allMessages={allMessages} onGoToCard={onGoToCard} onNewNote={onNewNote} />
+              <AssistantMessageView key={m.id} message={m} cards={cards} allMessages={allMessages} onGoToMessage={onGoToMessage} onNewNote={onNewNote} />
             ))}
             {sendError && <div role="alert" className="status-row">{sendError}{reconnect && <button onClick={()=>connectRun(reconnect.id,reconnect.threadId)}>重新连接</button>}</div>}
             {loading && sendingThread === currentThreadId && <div className="status-row"><span>{statusText}</span><button className="stop" onClick={handleStop} title="中断生成">停止</button></div>}
@@ -291,22 +381,47 @@ export function AssistantPanel({ conv, provider, messages, cards, allMessages, c
                 <IconButton onClick={handleRemoveQuote} icon="close" label="移除引用" className="composer-quote-remove" />
               </div>
             )}
+            {scopeCardIds.length > 0 && (
+              <div className="scope-chips" role="group" aria-label="已限定检索范围的卡片">
+                {scopeCardIds.map((id) => {
+                  const c = cards.find((x) => x.id === id);
+                  return (
+                    <span key={id} className="scope-chip" title={c?.title || "卡片"}>
+                      <span className="scope-chip-label">@{c?.title || "卡片"}</span>
+                      <button type="button" className="scope-chip-remove" aria-label="移除该卡片作用域" onClick={() => removeScopeCard(id)}>×</button>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
             <textarea
-              placeholder="询问当前会话的内容……"
+              ref={textareaRef}
+              placeholder="询问当前会话的内容……（输入 @ 限定到某张卡片）"
               value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
-                  e.preventDefault();
-                  handleSend();
-                }
-              }}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
             />
             <div className="composer-bottom">
               <span>不使用模型外部知识</span>
               <Button variant="primary" className="send-btn" icon="arrowUp" aria-label="提问" title="提问" onClick={handleSend} disabled={!input.trim() || loading} />
             </div>
           </div>
+          {picker && pickerCards.length > 0 && createPortal(
+            <div className="mention-picker" style={{ position: "fixed", top: picker.rect.bottom + 4, left: picker.rect.left, zIndex: 1000 }}>
+              {pickerCards.map((c, i) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  className={"mention-item" + (i === picker.idx ? " active" : "")}
+                  onMouseEnter={() => setPicker((p) => p ? { ...p, idx: i } : p)}
+                  onClick={() => addScopeCard(c.id)}
+                >
+                  <Icon name="cards" /><span>{c.title || "主卡片"}</span>
+                </button>
+              ))}
+            </div>,
+            document.body,
+          )}
         </>
       )}
       {selection && createPortal(
@@ -346,7 +461,7 @@ function dedupByCard<T extends { card_id: string }>(evidence: T[]): T[] {
   return out;
 }
 
-const AssistantMessageView = React.memo(function AssistantMessageView({ message, cards, allMessages, onGoToCard, onNewNote }: { message: KnowledgeAssistantMessage; cards: Card[]; allMessages: Record<string, Message[]>; onGoToCard: (cardId: string) => void; onNewNote: (content: string) => void }) {
+const AssistantMessageView = React.memo(function AssistantMessageView({ message, cards, allMessages, onGoToMessage, onNewNote }: { message: KnowledgeAssistantMessage; cards: Card[]; allMessages: Record<string, Message[]>; onGoToMessage: (cardId: string, messageId: string) => void; onNewNote: (content: string) => void }) {
   const contentRef = useRef<HTMLDivElement>(null);
   if (message.role === "user") {
     return (
@@ -354,6 +469,14 @@ const AssistantMessageView = React.memo(function AssistantMessageView({ message,
         <div className="assistant-msg-user">
           {message.quote && (
             <div className="msg-quote"><small>引用原文</small>{message.quote}</div>
+          )}
+          {message.scope_card_ids && message.scope_card_ids.length > 0 && (
+            <div className="scope-chips scope-chips--readonly" aria-label="提问作用域">
+              {message.scope_card_ids.map((id) => {
+                const c = cards.find((x) => x.id === id);
+                return <span key={id} className="scope-chip" title={c?.title || "卡片"}>@{c?.title || "卡片"}</span>;
+              })}
+            </div>
           )}
           {message.content}
         </div>
@@ -370,7 +493,7 @@ const AssistantMessageView = React.memo(function AssistantMessageView({ message,
   // 把正文 [N] 转成可点击徽章：hover 弹卡片信息，点击前往该卡片
   return (
     <div className="assistant-answer-turn">
-      <EvidenceBadge messageId={message.id} content={message.content || ""} evidence={evidenceList} cards={cards} allMessages={allMessages} onGoToCard={onGoToCard} html={html} contentRef={contentRef} />
+      <EvidenceBadge messageId={message.id} content={message.content || ""} evidence={evidenceList} cards={cards} allMessages={allMessages} onGoToMessage={onGoToMessage} html={html} contentRef={contentRef} />
       <div className="assistant-message-actions assistant-message-actions--answer">
         <IconButton icon="notePlus" label="存为笔记" onClick={() => onNewNote(source)} />
         <CopyButton text={plainText} iconOnly />
@@ -382,13 +505,13 @@ const AssistantMessageView = React.memo(function AssistantMessageView({ message,
 });
 
 // 证据徽章 + 浮窗：复用 .cite-badge/.cite-popover 样式，把 [N] 角标转成带卡片信息的可点击徽章
-function EvidenceBadge({ messageId, content, evidence, cards, allMessages, onGoToCard, html, contentRef }: {
+function EvidenceBadge({ messageId, content, evidence, cards, allMessages, onGoToMessage, html, contentRef }: {
   messageId: string;
   content: string;
   evidence: KnowledgeAssistantMessage["evidence"];
   cards: Card[];
   allMessages: Record<string, Message[]>;
-  onGoToCard: (cardId: string) => void;
+  onGoToMessage: (cardId: string, messageId: string) => void;
   html: string;
   contentRef: React.RefObject<HTMLDivElement>;
 }) {
@@ -439,7 +562,7 @@ function EvidenceBadge({ messageId, content, evidence, cards, allMessages, onGoT
         badge.addEventListener("mouseleave", () => {
           scheduleClose();
         });
-        badge.addEventListener("click", () => { clearTimer(); onGoToCard(ev.card_id); });
+        badge.addEventListener("click", () => { clearTimer(); onGoToMessage(ev.card_id, ev.message_id); });
         frag.appendChild(badge);
         last = at + m[0].length;
       }
@@ -447,7 +570,7 @@ function EvidenceBadge({ messageId, content, evidence, cards, allMessages, onGoT
       if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
       node.parentNode?.replaceChild(frag, node);
     }
-  }, [content, evidence, cards, onGoToCard]);
+  }, [content, evidence, cards, onGoToMessage]);
 
   const activeEv = activeCite != null ? evidence[activeCite.idx - 1] : null;
   const activeCard = activeEv ? cards.find((c) => c.id === activeEv.card_id) : null;

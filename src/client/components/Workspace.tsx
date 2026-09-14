@@ -62,6 +62,9 @@ interface WorkspaceProps {
   onSetCurrentThreadId: (id: string | null) => void;
   previewCardId: string | null;
   onPreviewCard: (id: string | null) => void;
+  pendingScroll: { cardId: string; messageId: string } | null;
+  onGoToMessage: (cardId: string, messageId: string) => void;
+  onConsumedScroll: () => void;
 }
 
 export function Workspace(props: WorkspaceProps) {
@@ -273,6 +276,8 @@ export function Workspace(props: WorkspaceProps) {
                     composerControls={controls}
                     settingsPending={settingsPending}
                     settingsNote={settingNote}
+                    pendingScroll={props.pendingScroll}
+                    onConsumedScroll={props.onConsumedScroll}
                   />
                 ) : (
                   <div className="welcome">
@@ -308,11 +313,11 @@ export function Workspace(props: WorkspaceProps) {
           currentThreadId={props.currentThreadId}
           onSetCurrentThreadId={props.onSetCurrentThreadId}
           onClose={() => { props.onToggleAssistant(); loadConversationById(conv.id); }}
-          onSendAssistant={(question, threadId, quote) => api.sendAssistant(conv.id, question, threadId, quote)}
+          onSendAssistant={(question, threadId, quote, scopeCardIds) => api.sendAssistant(conv.id, question, threadId, quote, scopeCardIds)}
           // 存为笔记：中间区域切到「用户笔记」tab，创建新笔记并打开编辑器弹窗
           onNewNote={(content) => { props.onSetTab("notes"); props.onNewNote(content); }}
-          // 徽章/「前往卡片」直接在主卡片集群跳转到目标卡片，期间不关闭右侧助手面板
-          onGoToCard={(id) => { props.onPreviewCard(null); props.onSetTab("chat"); onSelectCard(id); }}
+          // 徽章点击：切到目标卡并滚动/高亮到证据指向的那条回答
+          onGoToMessage={(cardId, messageId) => { props.onGoToMessage(cardId, messageId); }}
         />
       )}
       {props.previewCardId && (
