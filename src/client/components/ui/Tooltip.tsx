@@ -11,9 +11,20 @@ import {
   useRole,
 } from "@floating-ui/react";
 
+// 合并多个 ref（子元素自带 ref 与 floating-ui 注入的 reference ref）。
+function mergeRefs<T>(...refs: (React.Ref<T> | undefined)[]) {
+  return (node: T) => {
+    for (const r of refs) {
+      if (typeof r === "function") r(node);
+      else if (r && typeof r === "object") (r as React.MutableRefObject<T>).current = node;
+    }
+  };
+}
+
 // 共享 Tooltip 原语：hover 触发，延迟 300ms 显示 / 80ms 隐藏（比系统原生 title 快）。
 // 自动 flip/shift 防止视口溢出；FloatingPortal 渲染到 body，避免父级 overflow/transform 裁剪。
 // cloneElement 注入 ref + hover 事件，调用方无需改原有按钮结构。
+// 注意：子元素必须能转发 ref（forwardRef），否则 reference DOM 拿不到、tooltip 不显示。
 export function Tooltip({
   content,
   children,
@@ -39,9 +50,13 @@ export function Tooltip({
 
   if (disabled || !content) return children;
 
+  // 保留子元素原有 ref，合并 floating-ui 的 reference ref。
+  const childRef = (children as React.ReactElement<{ ref?: React.Ref<unknown> }>).props.ref;
+  const referenceProps = getReferenceProps({ ref: mergeRefs(childRef, refs.setReference) });
+
   return (
     <>
-      {React.cloneElement(children, getReferenceProps({ ref: refs.setReference }) as Record<string, unknown>)}
+      {React.cloneElement(children, referenceProps as Record<string, unknown>)}
       <FloatingPortal>
         {open && (
           <div

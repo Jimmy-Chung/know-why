@@ -1,7 +1,7 @@
 import { Icon } from "./ui/Icon.js";
 import { Button, IconButton } from "./ui/Button.js";
 import React, { useState } from "react";
-import { Modal, Tooltip } from "@arco-design/web-react";
+import { Modal } from "@arco-design/web-react";
 import type { ProviderConfig, Conversation } from "../../shared/types.js";
 
 interface SidebarProps {
@@ -101,9 +101,7 @@ export function Sidebar(props: SidebarProps) {
       <div className="sidebar-bottom">
         <div className="eyebrow">
           模型服务
-          <Tooltip content="管理 Provider" mini>
-            <IconButton onClick={onOpenSettings} icon="settings" label="管理模型服务" />
-          </Tooltip>
+          <IconButton onClick={onOpenSettings} icon="settings" label="管理模型服务" />
         </div>
         <div className="provider-list">
           {providers.map((p) => (
