@@ -3,16 +3,26 @@ import type { Card } from "../src/shared/types.js";
 import { buildTreeGeometry, treeFrameSize, treeSurface, treeClippedEdges } from "../src/client/tree-geometry.js";
 const card = (id: string, parent: string | null): Card => ({ id, parent_card_id: parent, conversation_id: "fixture", title: id, source_anchor_id: null, initial_snapshot_id: null, created_at: "2026-09-09" });
 
-it("keeps the frame landscape and within the content area for small, tall and wide trees", () => {
-  for (const graph of [{ width: 0, height: 0 }, { width: 168, height: 128 }, { width: 0, height: 1600 }, { width: 6000, height: 1600 }]) {
-    for (const available of [{ width: 900, height: 700 }, { width: 340, height: 500 }, { width: 500, height: 180 }]) {
-      const frame = treeFrameSize(graph, available.width, available.height);
-      expect(frame.width).toBeGreaterThan(frame.height);
-      expect(frame.width).toBeLessThanOrEqual(available.width - 48);
-      expect(frame.height).toBeLessThanOrEqual(available.height - 48);
-    }
+it("keeps the frame landscape and within the content area", () => {
+  for (const available of [{ width: 900, height: 700 }, { width: 340, height: 500 }, { width: 500, height: 180 }]) {
+    const frame = treeFrameSize(available.width, available.height);
+    expect(frame.width).toBeGreaterThan(frame.height);
+    expect(frame.width).toBeLessThanOrEqual(available.width - 48);
+    expect(frame.height).toBeLessThanOrEqual(available.height - 48);
   }
-  expect(treeFrameSize({ width: 168, height: 128 }, 900, 700)).toEqual({ width: 280, height: 224 });
+  expect(treeFrameSize(900, 700)).toEqual({ width: 280, height: 224 });
+});
+
+it("keeps the canvas frame fixed so a growing tree cannot squeeze the card area", () => {
+  // 回归：取景框曾随 graph.width/height 增长（280→480px），画布逐步盖住左侧卡片区。
+  // 现在尺寸只由可用空间决定，与树大小无关（树在框内平移）。
+  const base = treeFrameSize(900, 700);
+  expect(base).toEqual({ width: 280, height: 224 });
+  expect(treeFrameSize(900, 700)).toEqual(base);
+  // 窄窗口下收缩，但仍 landscape 且不超出可用空间。
+  const tight = treeFrameSize(360, 240);
+  expect(tight).toEqual({ width: 280, height: 192 });
+  expect(tight.width).toBeGreaterThan(tight.height);
 });
 
 it("preserves every branch, parent-above-child geometry and sibling order", () => {

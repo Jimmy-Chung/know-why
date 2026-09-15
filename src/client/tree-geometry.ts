@@ -27,11 +27,15 @@ export function buildTreeGeometry(cards: Card[]) {
 
 export type TreeGeometry = ReturnType<typeof buildTreeGeometry>;
 
-export function treeFrameSize(graph: { width: number; height: number }, availableWidth: number, availableHeight: number) {
-  // Leave room around the tree and for the controls; keep large trees navigable in a bounded landscape frame.
+// 画布取景框固定尺寸：树在框内平移/缩放（见 treeSurface 生成的内层画布），
+// 框本身不随图增长——否则宽高会随分支数与节点数变大，逐步侵占左侧卡片区。
+// 只受可用空间约束：窄窗口下自适应收缩，但始终保持 landscape。
+const FRAME_WIDTH = 280;
+const FRAME_HEIGHT = 224;
+export function treeFrameSize(availableWidth: number, availableHeight: number) {
   const maxWidth = Math.max(1, Math.min(480, availableWidth - 48));
-  const height = Math.max(1, Math.min(Math.max(160, graph.height + 96), 300, availableHeight - 48, maxWidth / 1.25));
-  const width = Math.min(maxWidth, Math.max(280, graph.width + 64, height * 1.25));
+  const height = Math.max(1, Math.min(FRAME_HEIGHT, availableHeight - 48));
+  const width = Math.min(maxWidth, Math.max(FRAME_WIDTH, height * 1.25));
   return { width, height };
 }
 
