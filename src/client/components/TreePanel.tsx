@@ -29,7 +29,7 @@ export function TreePanel({ cards, currentCardId, onSelect, collapsed, reference
     measure();
     return () => observer.disconnect();
   }, []);
-  const frame = treeFrameSize(layout, available.width, available.height);
+  const frame = treeFrameSize(available.width, available.height);
   const openTimer = useRef<ReturnType<typeof setTimeout>>();
   const closeTimer = useRef<ReturnType<typeof setTimeout>>();
   const [expanded, setExpanded] = useState(false);
