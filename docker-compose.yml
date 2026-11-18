@@ -1,0 +1,33 @@
+services:
+  know-know:
+    build: .
+    image: know-know:1.3.0
+    container_name: know-know
+    restart: unless-stopped
+    ports:
+      # Mac 本机：只发布到回环地址，浏览器访问 http://127.0.0.1:8080
+      # 服务器：保持这一行，由宿主机 Nginx/Caddy 反代到 127.0.0.1:8080
+      # （若反向代理本身跑在容器里，改成 "8080:8080" 并自行收敛网络）
+      - "127.0.0.1:8080:8080"
+    environment:
+      PORT: "8080"
+      HOST: "0.0.0.0"
+      KNOW_KNOW_DATA_DIR: "/data"
+      # 必填：没有口令时任何能访问该端口的人都能读你的全部会话
+      KNOW_KNOW_AUTH_PASSWORD: "${KNOW_KNOW_AUTH_PASSWORD:?请先执行 cp .env.example .env 并设置访问口令}"
+      # 反向代理改写了 Host 时才需要下面两行
+      # KNOW_KNOW_ALLOWED_ORIGINS: "https://know.example.com"
+      # KNOW_KNOW_TRUST_PROXY: "1"
+      # 关闭本地向量检索可省约 448MB 模型下载（知识助手退回关键词检索）
+      # KNOW_KNOW_EMBEDDINGS: "off"
+    volumes:
+      - know-know-data:/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:'+(process.env.PORT||8080)+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  know-know-data:

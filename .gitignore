@@ -1,6 +1,8 @@
 node_modules/
+.npm-cache/
 dist/
 dist-client/
+dist-server/
 *.log
 .DS_Store
 .env
