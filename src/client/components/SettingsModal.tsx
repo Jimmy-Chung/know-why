@@ -216,24 +216,6 @@ export function SettingsModal({ providers, onClose, onSaved }: SettingsModalProp
     }
   };
 
-  // 导出
-  const doExport = async () => {
-    clearNote();
-    try {
-      const data = await api.exportData();
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "know-know-export.json";
-      a.click();
-      URL.revokeObjectURL(url);
-      showNote("导出完成", "ok");
-    } catch (e) {
-      showNote((e as Error).message, "err");
-    }
-  };
-
   const typeLabel = (t: string) => (t === "openai" ? "OpenAI" : t === "deepseek" ? "DeepSeek" : t === "openrouter" ? "OpenRouter" : "自定义");
 
   return (
@@ -243,7 +225,7 @@ export function SettingsModal({ providers, onClose, onSaved }: SettingsModalProp
           <h2>设置</h2>
           <IconButton onClick={onClose} icon="close" label="关闭设置" />
         </div>
-        <p>配置模型服务。API Key 由本地服务安全保存，不进入导出文件或日志。</p>
+        <p>配置模型服务。API Key 由本地服务安全保存，不进入日志。</p>
 
         <div className="settings-tabs">
           <button className={tab === "provider" ? "selected" : ""} onClick={() => { setTab("provider"); clearNote(); }}>
@@ -346,13 +328,12 @@ export function SettingsModal({ providers, onClose, onSaved }: SettingsModalProp
 
         {tab === "data" && (
           <div>
-            <div className="settings-section-title">备份与导出</div>
+            <div className="settings-section-title">备份</div>
             <p className="settings-description">
-              备份为本机 SQLite 副本；导出为结构化 JSON（不含明文密钥）。密钥需单独配置。
+              备份为本机 SQLite 副本；密钥需单独配置。
             </p>
             <div className="settings-actions">
               <button onClick={doBackup}>立即备份</button>
-              <button onClick={doExport}>导出 JSON</button>
             </div>
             {backupFile && <div className="settings-note ok">备份文件：{backupFile}</div>}
             <div className={`settings-note ${note.kind}`}>{note.text}</div>
