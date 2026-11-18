@@ -106,13 +106,6 @@ export const api = {
   sendMessage: (cardId: string, body: { content: string; quote_anchor_id?: string | null; attachments?: Attachment[] }) =>
     fetch(`${BASE}/cards/${cardId}/messages`, { method: "POST", headers: ct(), body: JSON.stringify(body) }).then(j<{ userMessage: Message; run: Run }>),
 
-  // Attachments
-  uploadAttachment: (convId: string, file: File) => {
-    const fd = new FormData();
-    fd.append("file", file);
-    return fetch(`${BASE}/conversations/${convId}/attachments`, { method: "POST", body: fd }).then(j<Attachment & { url: string }>);
-  },
-
   // Run SSE
   streamRun: (runId: string, onEvent: (e: SSEEvent) => void, onDone?: () => void): (() => void) => {
     const ctrl = new AbortController();
