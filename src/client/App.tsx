@@ -192,6 +192,11 @@ export default function App() {
     }
     const r = await api.createConversation();
     await loadConversations();
+    // 新建会话是一次上下文切换：收起右侧助手，否则旧面板会盖在新会话上，
+    // 看起来像「点了没反应」。
+    setAssistantOpen(false);
+    setActiveTab("chat");
+    setEditingNote(null);
     setCurrentId(r.conversation.id);
   }, [providers, loadConversations]);
 
