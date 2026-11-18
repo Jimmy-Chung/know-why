@@ -145,10 +145,11 @@ export class OpenAIAdapter implements Adapter {
 }
 
 // DeepSeek 适配器：与 OpenAI 兼容的 Chat Completions。
-// DeepSeek 的原生 web_search 能力以 Responses API 探测为准；默认不假定具备。
+// 原生联网通过声明 deepseek_web_search 工具启用：由模型自行决定是否搜索，
+// tool_choice 不能指定该工具，因此支持自动联网、无法强制。
 export class DeepSeekAdapter implements Adapter {
   type = "deepseek" as const;
-  constructor(private apiKey: string, private apiBase: string = "https://api.deepseek.com/v1", private nativeSearch: boolean = false) {}
+  constructor(private apiKey: string, private apiBase: string = "https://api.deepseek.com/v1", private nativeSearch: boolean = true) {}
 
   supportsNativeSearch() {
     return this.nativeSearch;
@@ -175,12 +176,18 @@ export class DeepSeekAdapter implements Adapter {
   }
 
   async *stream(req: AdapterRequest): AsyncIterable<StreamEvent> {
+    const useNativeSearch = req.webMode !== "off" && this.supportsNativeSearch();
     const body: any = {
       model: req.model,
       messages: req.messages,
       stream: true,
+      stream_options: { include_usage: true },
     };
     if (req.maxOutputTokens) body.max_tokens = req.maxOutputTokens;
+    if (useNativeSearch) {
+      // 服务端工具：模型自行决定是否搜索，不能出现在 tool_choice 中
+      body.tools = [{ type: "deepseek_web_search", name: "deepseek_web_search" }];
+    }
     Object.assign(body, reasoningRequest(req.thinkMode, req.reasoning ?? UNKNOWN_REASONING, "deepseek"));
     const res = await fetch(`${this.base()}/chat/completions`, {
       method: "POST",
@@ -189,17 +196,56 @@ export class DeepSeekAdapter implements Adapter {
       signal: req.signal,
     });
     if (!res.ok || !res.body) throw await toError(res);
+
+    // 同一次回答里同一来源会在工具结果和引用标注中各出现一次，去重后再上报。
+    const seenSources = new Set<string>();
+    const pushSource = (out: StreamEvent[], raw: any): void => {
+      const url = typeof raw?.url === "string" ? raw.url.trim() : "";
+      if (!url) return;
+      const title = typeof raw?.title === "string" && raw.title ? raw.title : url;
+      const key = `${url}|${title}`;
+      if (seenSources.has(key)) return;
+      seenSources.add(key);
+      out.push({
+        type: "source",
+        source: {
+          url,
+          title,
+          snippet: typeof raw?.snippet === "string" ? raw.snippet : "",
+          content_kind: "snippet",
+        },
+      });
+    };
+
     yield* parseSSE(res.body, (evt: string) => {
       if (evt === "[DONE]") return { kind: "done" };
       try {
         const j = JSON.parse(evt);
         if (j.usage) req.onUsage?.(j.usage);
-        const choice = j.choices?.[0];
-        const delta = choice?.delta?.content;
-        const reasoning = choice?.delta?.reasoning_content;
+        const delta = j.choices?.[0]?.delta;
+        if (!delta) return j.usage ? { kind: "usage", usage: j.usage } : { kind: "ignore" };
+
         const out: StreamEvent[] = [];
-        if (reasoning) out.push({ type: "thinking", text: reasoning });
-        if (delta) out.push({ type: "delta", text: delta });
+        if (delta.reasoning_content) out.push({ type: "thinking", text: delta.reasoning_content });
+        if (delta.content) out.push({ type: "delta", text: delta.content });
+
+        // 原生搜索的工具调用：calls[].action.queries + calls[].sources
+        for (const group of delta.server_tool_calls ?? []) {
+          for (const call of group?.calls ?? []) {
+            const queries = Array.isArray(call?.action?.queries)
+              ? call.action.queries.filter((q: unknown) => typeof q === "string" && q.trim())
+              : [];
+            if (queries.length) {
+              out.push({ type: "searching", queries, service: "DeepSeek 原生搜索" });
+            }
+            for (const source of call?.sources ?? []) pushSource(out, source);
+          }
+        }
+        // 最终回答里的引用标注
+        for (const annotation of delta.annotations ?? []) {
+          pushSource(out, annotation?.url_citation);
+        }
+
         if (j.usage && !out.length) return { kind: "usage", usage: j.usage };
         return out.length ? { kind: "multi", events: out } : { kind: "ignore" };
       } catch {

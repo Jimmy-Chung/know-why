@@ -355,7 +355,10 @@ export async function executeRun(conv: Conversation, card: Card, run: Run, opts:
       // 由适配器在 stream 内处理
     } else if (searchPlan.kind === "failed_force") {
       // 强制搜索但无可用服务：明确报错，不静默退化
-      throw new AdapterError("强制搜索已启用，但未配置可用的搜索服务，且模型无原生搜索能力。请在设置中配置独立搜索或改为不联网。", "capability");
+      throw new AdapterError(
+        searchPlan.reason || "强制搜索已启用，但未配置可用的搜索服务，且模型无原生搜索能力。请在设置中配置独立搜索或改为不联网。",
+        "capability",
+      );
     }
 
     // 流式生成
@@ -525,23 +528,35 @@ type SearchPlan =
   | { kind: "none" }
   | { kind: "native" }
   | { kind: "independent"; queries: string[]; service: string; doSearch: () => Promise<SearchResultItem[]> }
-  | { kind: "failed_force" };
+  | { kind: "failed_force"; reason?: string };
 
 async function decideSearch(conv: Conversation, provider: any, context: any, signal: AbortSignal): Promise<SearchPlan> {
   const webMode = conv.web_mode as WebMode;
   if (webMode === "off") return { kind: "none" };
 
   const adapter = await createAdapter(provider);
-  const nativeSearch = adapter.supportsNativeSearch() && provider.capabilities?.web_search;
+  // 能力以模型接口探测结果为准；探测失败时回退到 Provider 能力快照。
+  const catalog = await getModelCatalog(provider, conv.model).catch(() => null);
+  const webSearch = catalog?.webSearch ?? !!provider.capabilities?.web_search;
+  const forceSearch = catalog?.forceSearch ?? !!provider.capabilities?.force_search;
+  const nativeSearch = adapter.supportsNativeSearch() && webSearch;
 
-  if (nativeSearch && (webMode === "auto" || webMode === "force")) {
-    return { kind: "native" };
-  }
+  // 自动：有原生搜索时交给模型自行决定是否联网
+  if (webMode === "auto" && nativeSearch) return { kind: "native" };
+  // 强制：只有接口能保证“实际执行检索”时才走原生，否则用独立搜索兜住强制语义
+  if (webMode === "force" && nativeSearch && forceSearch) return { kind: "native" };
 
   // 无原生搜索 → 独立搜索
   const searchAdapter = await createSearchAdapter();
   if (!searchAdapter) {
-    if (webMode === "force") return { kind: "failed_force" };
+    if (webMode === "force") {
+      return {
+        kind: "failed_force",
+        reason: nativeSearch
+          ? "该模型支持原生联网，但接口无法强制触发搜索。请配置独立搜索（Tavily），或改为「自动联网」。"
+          : undefined,
+      };
+    }
     // auto 但无独立搜索：如实不搜索
     return { kind: "none" };
   }
