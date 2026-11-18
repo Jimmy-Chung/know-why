@@ -2,7 +2,6 @@ import type { ModelCatalog } from "../shared/reasoning.js";
 // 前端 API 客户端：封装与本地服务的交互，含 SSE 订阅。
 import type {
   ProviderConfig,
-  SearchConfig,
   Conversation,
   Card,
   Message,
@@ -46,12 +45,6 @@ export const api = {
     fetch(`${BASE}/providers/${id}/models?model=${encodeURIComponent(model)}${refresh ? "&refresh=1" : ""}`, { signal }).then(j<ModelCatalog>),
 
   // Search
-  getSearch: () => fetch(`${BASE}/search`).then(j<SearchConfig | null>),
-  setSearch: (body: any) =>
-    fetch(`${BASE}/search`, { method: "PUT", headers: ct(), body: JSON.stringify(body) }).then(j<SearchConfig>),
-  setSearchSecret: (key: string) =>
-    fetch(`${BASE}/search/secret`, { method: "PUT", headers: ct(), body: JSON.stringify({ key }) }).then(j<any>),
-  testSearch: () => fetch(`${BASE}/search/test`, { method: "POST" }).then(j<{ ok: boolean; detail: string }>),
 
   // Conversations
   listConversations: () => fetch(`${BASE}/conversations`).then(j<Conversation[]>),

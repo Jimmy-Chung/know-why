@@ -49,7 +49,7 @@ export default function App() {
   // 助手引用跳转：切卡后滚动并高亮到该回答消息
   const [pendingScroll, setPendingScroll] = useState<{ cardId: string; messageId: string } | null>(null);
   const [activeRuns, setActiveRuns] = useState<Set<string>>(new Set());
-  // run 中间态文本：runId → 状态描述（如"规划搜索…""正在搜索(Tavily)…""思考中…"）
+  // run 中间态文本：runId → 状态描述（如"正在搜索…""思考中…"）
   const [runStatuses, setRunStatuses] = useState<Record<string, string>>({});
 
   // 加载 providers
