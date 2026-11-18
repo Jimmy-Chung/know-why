@@ -426,7 +426,21 @@ export function AssistantPanel({ conv, provider, messages, cards, allMessages, c
             const maxH = Math.min(placeAbove ? above : below, PICKER_MAX);
             const left = Math.max(8, Math.min(picker.rect.left, window.innerWidth - 240));
             return createPortal(
-              <div className="mention-picker" style={{ position: "fixed", top: placeAbove ? picker.rect.top - gap - maxH : picker.rect.bottom + gap, left, maxHeight: maxH, overflowY: "auto", zIndex: 1000 }}>
+              <div
+                className="mention-picker"
+                style={{
+                  position: "fixed",
+                  // 向上展开时用 bottom 贴住输入框：单条候选也能紧贴，
+                  // 而不是按 maxH 预留高度、把列表顶到很远的上方。
+                  ...(placeAbove
+                    ? { bottom: window.innerHeight - picker.rect.top + gap }
+                    : { top: picker.rect.bottom + gap }),
+                  left,
+                  maxHeight: maxH,
+                  overflowY: "auto",
+                  zIndex: 1000,
+                }}
+              >
                 {pickerCards.map((c, i) => (
                   <button
                     key={c.id}
