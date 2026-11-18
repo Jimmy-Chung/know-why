@@ -47,10 +47,10 @@ export function Sidebar(props: SidebarProps) {
   return (
     <aside className="sidebar" id="session-navigation" aria-hidden={props.collapsed || undefined} {...{ inert: props.collapsed ? "" : undefined }} aria-label="会话导航">
       <div className="brand">
-        <img className="brand-logo" src={brandIcon} width={32} height={32} alt="" />
+        <img className="brand-logo" src={brandIcon} width={40} height={40} alt="" />
         <span>
           <span className="brand-wordmark">KNOW WHY</span>
-          <small>沿着问题，往深处走。</small>
+          <small>沿着知识继续探索吧</small>
         </span>
       </div>
 
