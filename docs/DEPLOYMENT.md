@@ -90,7 +90,7 @@ sudo certbot --nginx -d 你的域名
 
 ## 4. 首次使用
 
-1. 用口令登录后，点左下角「管理模型服务」，新增 Provider（OpenAI / DeepSeek / 自定义兼容接口），填 API Base、默认模型、API Key。
+1. 用口令登录后，点左下角「管理模型服务」，新增 Provider（OpenAI / DeepSeek / OpenRouter），填默认模型与 API Key，点「验证连接」通过后保存。官方服务的接口地址无需填写；只有自定义兼容接口才需要。
 3. 新建会话开始使用。API Key 只存在服务端数据卷里（容器内优先 Keychain，容器里没有则自动用 AES-256-GCM 加密文件）。
 
 ---

@@ -1,4 +1,5 @@
 import type { ModelCatalog } from "../shared/reasoning.js";
+import type { ProviderCapabilities } from "../shared/types.js";
 // 前端 API 客户端：封装与本地服务的交互，含 SSE 订阅。
 import type {
   ProviderConfig,
@@ -40,6 +41,19 @@ export const api = {
     fetch(`${BASE}/providers/${id}/default`, { method: "POST" }).then(j<any>),
   testProvider: (id: string) =>
     fetch(`${BASE}/providers/${id}/test`, { method: "POST" }).then(j<{ ok: boolean; detail: string }>),
+  // 保存前的连接验证：不落库，返回能力探测结果
+  verifyProvider: (body: { type: string; api_base?: string; api_key?: string; model: string; provider_id?: string }) =>
+    fetch(`${BASE}/providers/verify`, { method: "POST", headers: ct(), body: JSON.stringify(body) }).then(
+      j<{
+        ok: boolean;
+        detail: string;
+        errorKind?: string;
+        capabilities?: ProviderCapabilities;
+        resolvedModel?: string;
+        availableModels?: string[];
+        catalog?: ModelCatalog;
+      }>,
+    ),
 
   getProviderModels: (id: string, model: string, refresh = false, signal?: AbortSignal) =>
     fetch(`${BASE}/providers/${id}/models?model=${encodeURIComponent(model)}${refresh ? "&refresh=1" : ""}`, { signal }).then(j<ModelCatalog>),
