@@ -15,6 +15,7 @@ import type {
   Run,
   Attachment,
   NoteCard,
+  SearchConfig,
 } from "../../shared/types.js";
 import { CardPile } from "./CardPile.js";
 import { TreePanel } from "./TreePanel.js";
@@ -150,21 +151,51 @@ export function Workspace(props: WorkspaceProps) {
       .then(data => { if (!controller.signal.aborted) setCatalogState({ key: capabilityKey, data }); })
       .catch(() => { if (!controller.signal.aborted) setCatalogState({ key: capabilityKey, data: {
         models: [conv.model], model: conv.model, reasoning: UNKNOWN_REASONING,
+        contextWindow: provider?.capabilities?.context_window ?? 32000,
+        inputModalities: ["text"], webSearch: false, forceSearch: false,
         warning: "读取模型能力失败，可在 Provider 设置中刷新重试。",
       } }); });
     return () => controller.abort();
   }, [capabilityKey]);
+  // 独立搜索（Tavily）是全局开关：没有原生搜索的模型也有机会联网
+  const [searchConfig, setSearchConfig] = useState<SearchConfig | null>(null);
+  useEffect(() => {
+    let alive = true;
+    api.getSearch().then(cfg => { if (alive) setSearchConfig(cfg); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
   const availableModels = [...new Set([conv.model, ...(catalog?.models ?? provider?.capabilities.models ?? [])].filter(Boolean))];
   const reasoning = catalog?.reasoning ?? UNKNOWN_REASONING;
   const thinkMode = normalizeThinkMode(conv.think_mode);
   const options = reasoningOptions(reasoning);
   const invalidThinkMode = !loadingCapabilities && !options.includes(thinkMode);
   const settingsPending = savingSettings || (loadingCapabilities && thinkMode !== "default") || invalidThinkMode;
+  // 联网可用性 = 模型原生搜索 或 已配置的独立搜索；强制联网还要接口支持 tool_choice 强约束
+  const nativeWeb = catalog?.webSearch ?? false;
+  const nativeForce = nativeWeb && !!catalog?.forceSearch;
+  const tavilyReady = !!searchConfig?.enabled && !!searchConfig?.has_secret;
+  const webAvailable = nativeWeb || tavilyReady;
+  const forceAvailable = nativeForce || tavilyReady;
+  const webTitle = !webAvailable
+    ? "当前模型不支持原生联网，且未配置独立搜索（Tavily）"
+    : nativeWeb
+      ? `模型原生联网${nativeForce ? "，支持强制搜索" : "；无法强制，强制联网需依赖独立搜索（Tavily）"}`
+      : "通过独立搜索（Tavily）联网，非模型原生能力";
   const controls = <>
-    <label className="composer-setting" title="当前会话共享，影响后续发送的消息">
+    <label className="composer-setting" title={webTitle}>
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c5 5 5 13 0 18-5-5-5-13 0-18Z"/></svg>
-      <select aria-label="联网模式" value={conv.web_mode} disabled={savingSettings} onChange={e => onUpdateSettings({ web_mode: e.target.value as WebMode })}>
-        <option value="auto">自动联网</option><option value="force">强制联网</option><option value="off">不联网</option>
+      <select aria-label="联网模式" value={webAvailable ? conv.web_mode : "off"} disabled={savingSettings || !webAvailable} onChange={e => onUpdateSettings({ web_mode: e.target.value as WebMode })}>
+        {webAvailable ? (
+          <>
+            <option value="auto">{nativeWeb ? "自动联网" : "自动联网（Tavily）"}</option>
+            <option value="force" disabled={!forceAvailable}>
+              {!forceAvailable ? "强制联网（不支持）" : nativeWeb && catalog?.forceSearch ? "强制联网" : "强制联网（Tavily）"}
+            </option>
+            <option value="off">不联网</option>
+          </>
+        ) : (
+          <option value="off">联网不可用</option>
+        )}
       </select>
     </label>
     <label className="composer-setting" title={catalog?.warning || `${reasoning.mandatory ? "该模型始终开启推理。" : ""}${reasoning.detail}`}>
