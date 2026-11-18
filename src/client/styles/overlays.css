@@ -66,3 +66,8 @@
 .settings-description { font-size: var(--text-sm); color: var(--muted); margin: 0 0 var(--space-5); }
 
 .settings-backup { margin-top: var(--space-7); padding-top: var(--space-2); border-top: 1px solid var(--border); }
+
+/* Provider 新增/编辑弹窗：列表页只放按钮，表单在独立弹窗里完成 */
+.provider-dialog { width: 560px; }
+.provider-add { width: 100%; min-height: var(--control-height); margin-top: var(--space-2); border: 1px dashed var(--border-strong); border-radius: var(--radius-lg); background: transparent; color: var(--muted); font-size: var(--text-sm); }
+.provider-add:hover { color: var(--accent); border-color: var(--accent); }
