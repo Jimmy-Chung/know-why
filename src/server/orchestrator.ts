@@ -24,7 +24,7 @@ import { buildContext, buildContextWithIds, assistantSystemPrompt, defaultSystem
 import { maybeCompressContext } from "./summary.js";
 import { completeChat } from "./complete.js";
 import { markdownToPlaintext } from "./selection.js";
-import { indexConversation, indexEmbeddings, retrievePassages } from "./knowledge.js";
+import { indexConversation, retrievePassages } from "./knowledge.js";
 import { assistantHistory, retrievalQuestion, buildRagRequest } from "./rag.js";
 import { getDb } from "./db.js";
 
@@ -397,7 +397,6 @@ export async function executeRun(conv: Conversation, card: Card, run: Run, opts:
     emit(run.id, { type: "done", run_id: run.id, message: finalMsg, run: finalRun });
     // 重建会话索引，供知识助手检索
     try { indexConversation(conv.id); } catch { /* 索引失败不影响主流程 */ }
-    void indexEmbeddings(conv.id).catch(() => {});
   } catch (e) {
     handleRunError(run, e);
   } finally {
@@ -419,7 +418,6 @@ function handleRunError(run: Run, e: unknown) {
     if (stoppedMsg && stoppedMsg.status === "streaming") repo.messages.setStatus(stoppedMsg.id, "stopped");
     emit(run.id, { type: "done", run_id: run.id, message: stoppedMsg ?? null, run: latestRun ?? run });
     try { indexConversation(run.conversation_id); } catch { /* ignore */ }
-    void indexEmbeddings(run.conversation_id).catch(() => {});
   } else {
     repo.runs.update(run.id, { status: "failed", error: msg, finished_at: new Date().toISOString() });
     if (run.message_id) repo.messages.setStatus(run.message_id, "failed", msg);
@@ -624,7 +622,6 @@ async function executeAssistant(conv: Conversation, run: Run, question: string, 
     const found = await retrievePassages(conv.id,query,40,controller.signal,scopeCardIds);
     controller.signal.throwIfAborted();
     // Backfill old sessions without delaying this keyword-based answer.
-    void indexEmbeddings(conv.id).catch(() => {});
     const prepared = buildRagRequest(question,history,found.candidates,provider.capabilities?.context_window || 32000,quote);
     metrics = { retrieval_ms:performance.now()-started,candidate_count:found.candidates.length,evidence_count:prepared.evidence.length,
       estimated_input_tokens:prepared.inputTokens,evidence_tokens:prepared.evidenceTokens,cache_hit:Number(found.cacheHit),semantic_ready:Number(found.semanticReady) };

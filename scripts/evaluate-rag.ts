@@ -5,7 +5,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 const dataDir=mkdtempSync(join(tmpdir(),"kk-rag-eval-"));
 process.env.KNOW_KNOW_DATA_DIR=dataDir;
-process.env.KNOW_KNOW_EMBEDDINGS="off";
 const {runMigrations}=await import("../src/server/migrate.js");runMigrations();
 const repo=await import("../src/server/repo.js");
 const {getDb,closeDb}=await import("../src/server/db.js");
@@ -37,7 +36,7 @@ try {
     const cacheStart=performance.now();const cached=await retrievePassages(conv.id,question);const cacheMs=performance.now()-cacheStart;
     trials.push({question,foundExpected:request.evidence.some(e=>e.excerpts?.some(x=>x.message_id===id&&x.text.includes("仅允许离线运行"))),retrievalMs:+retrievalMs.toFixed(2),cacheMs:+cacheMs.toFixed(2),cacheHit:cached.cacheHit,inputTokensEstimate:request.inputTokens,evidenceTokensEstimate:request.evidenceTokens});
   }
-  const report={description:"Synthetic offline lexical retrieval baseline; no real LLM or embedding inference. Latency is machine-specific.",generatedAt:new Date().toISOString(),messages,passages:(getDb().prepare("SELECT count(*) n FROM knowledge_passage").get() as any).n,indexMs:+indexMs.toFixed(2),fixtureAndIndexMs:+(performance.now()-sourceStarted).toFixed(2),passed:trials.filter(t=>t.foundExpected).length,total:trials.length,trials};
+  const report={description:"Synthetic offline lexical retrieval baseline; no real LLM inference. Latency is machine-specific.",generatedAt:new Date().toISOString(),messages,passages:(getDb().prepare("SELECT count(*) n FROM knowledge_passage").get() as any).n,indexMs:+indexMs.toFixed(2),fixtureAndIndexMs:+(performance.now()-sourceStarted).toFixed(2),passed:trials.filter(t=>t.foundExpected).length,total:trials.length,trials};
   const output=JSON.stringify(report,null,2);console.log(output);
   if(process.argv[2])writeFileSync(process.argv[2],output+"\n");
   if(report.passed!==report.total)process.exitCode=1;

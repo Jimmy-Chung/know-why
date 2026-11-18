@@ -5,7 +5,6 @@ import { join } from "node:path";
 import type { SSEEvent } from "../src/shared/types.js";
 import type { AdapterRequest } from "../src/server/adapters/types.js";
 const state=vi.hoisted(()=>({mode:"normal",requests:[] as AdapterRequest[],release:undefined as undefined|(()=>void)}));
-vi.mock("../src/server/embedding.js",async original=>({...await original<any>(),embeddingAvailable:async()=>false,embed:async(texts:string[])=>texts.map(()=>new Float32Array([1,0]))}));
 vi.mock("../src/server/adapters/index.js",async original=>({...await original<any>(),createAdapter:async()=>({
   async *stream(req:AdapterRequest){
     state.requests.push(req);

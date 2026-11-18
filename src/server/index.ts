@@ -28,8 +28,7 @@ import { defaultCapabilities, createAdapter } from "./adapters/index.js";
 import { setSecret, getSecret, deleteSecret, maskSecret } from "./secret.js";
 import { resolveAnchor, markdownToPlaintext, locateAnchor } from "./selection.js";
 import { buildBranchSnapshot, buildContext, assistantSystemPrompt } from "./context.js";
-import { indexConversation, indexEmbeddings, searchInSession, upsertTopic } from "./knowledge.js";
-import { warmEmbeddings } from "./embedding.js";
+import { indexConversation, searchInSession, upsertTopic } from "./knowledge.js";
 import { ulid } from "../shared/ids.js";
 import { backup, restore, exportJson } from "./backup.js";
 import { readServerConfig, isLoopbackHost } from "./config.js";
@@ -232,7 +231,6 @@ app.get("/api/conversations/:id", (c) => {
   const termLinks = repo.termLinks.listForConversation(id);
   const assistant = repo.assistant.list(id);
   const notes = repo.notes.listForConversation(id);
-  setImmediate(() => { void indexEmbeddings(id).catch(() => {}); });
   const view = repo.viewState.get(id);
   const provider = repo.providers.get(conv.provider_id);
   return c.json({
@@ -682,7 +680,6 @@ if (existsSync(clientDist)) {
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) serve({ fetch: app.fetch, port: config.port, hostname: config.host }, (info) => {
-  warmEmbeddings();
   const shownHost = config.host === "0.0.0.0" || config.host === "::" ? "127.0.0.1" : config.host;
   console.log(`Know Know 服务：http://${shownHost}:${info.port}（监听 ${config.host}:${info.port}）`);
   console.log(`数据目录：${getDataDir()}`);

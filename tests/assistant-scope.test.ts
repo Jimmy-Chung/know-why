@@ -3,30 +3,6 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-// Mock embedding：伪向量按关键词分方向，避免下载真实模型。
-vi.mock("../src/server/embedding.js", async (importOriginal) => {
-  const actual = (await importOriginal()) as any;
-  function fakeVec(text: string): Float32Array {
-    const v = new Float32Array(4);
-    if (text.includes("光合") || text.includes("植物")) {
-      v[0] = 1; v[1] = 0.05;
-    } else if (text.includes("天气")) {
-      v[2] = 1;
-    } else {
-      v[3] = 1;
-    }
-    const norm = Math.hypot(...Array.from(v)) || 1;
-    for (let i = 0; i < v.length; i++) v[i] = v[i]! / norm;
-    return v;
-  }
-  return {
-    ...actual,
-    embeddingAvailable: async () => true,
-    embed: async (texts: string[]) => texts.map((t) => fakeVec(t)),
-    embedQuery: async (q: string) => fakeVec(q),
-  };
-});
-
 let tmpDir: string;
 let repo: typeof import("../src/server/repo.js");
 let migrate: typeof import("../src/server/migrate.js");
