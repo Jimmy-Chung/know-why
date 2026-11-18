@@ -62,6 +62,8 @@ describe("POST /api/providers/verify", () => {
     expect(r.body.catalog.maxOutputTokens).toBe(393216);
     expect(r.body.catalog.reasoning.efforts).toEqual(["low", "high", "max"]);
     expect(r.body.capabilities).toMatchObject({ web_search: true, force_search: false, context_window: 1048576 });
+    // 能力细节只在内部使用，前端只显示结论
+    expect(r.body.detail).toBe("连接成功");
   });
 
   it("退役别名可匹配到当前模型", async () => {
