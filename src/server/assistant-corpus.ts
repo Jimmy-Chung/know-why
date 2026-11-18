@@ -158,6 +158,7 @@ export function buildCorpusRequest(
   contextWindow: number,
   quote?: string | null,
 ): CorpusRequestResult | null {
+  if (corpus.truncated) return null;
   const window = Number.isFinite(contextWindow) && contextWindow > 0 ? contextWindow : 32000;
   const outputReserve = Math.min(3000, Math.floor(window * 0.25));
   const inputBudget = Math.floor(window * 0.85) - outputReserve;
