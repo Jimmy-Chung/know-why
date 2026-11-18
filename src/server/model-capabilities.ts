@@ -1,6 +1,20 @@
 import type { ProviderConfig, ThinkMode } from '../shared/types.js';
 import { REASONING_EFFORTS, UNKNOWN_REASONING, normalizeThinkMode, reasoningOptions, type ReasoningCapabilities, type ReasoningEffort, type ModelCatalog } from '../shared/reasoning.js';
 import { getSecret } from './secret.js';
+import * as repo from './repo.js';
+
+const DEFAULT_CONTEXT_WINDOW = 32000;
+
+// 已退役/重命名的模型 ID → 接口中的当前 ID。
+// DeepSeek 保留旧名可用，但 /models 只列出新名；不映射就会拿不到窗口与档位。
+const MODEL_ALIASES: Record<string, string> = {
+  "deepseek-v4-flash": "deepseek-flash",
+  "deepseek-v4-flash-vision-exp": "deepseek-flash",
+};
+
+export function resolveModelAlias(model: string): string {
+  return MODEL_ALIASES[model] ?? model;
+}
 
 export function providerBase(provider: Pick<ProviderConfig, 'type' | 'api_base'>): string {
   return (provider.api_base || ({ openai: 'https://api.openai.com/v1', deepseek: 'https://api.deepseek.com/v1', openrouter: 'https://openrouter.ai/api/v1', custom: '' }[provider.type])).replace(/\/+$/, '');
@@ -35,6 +49,77 @@ export function parseReasoningMetadata(model: any): ReasoningCapabilities | null
       : unsupported();
   }
   return null;
+}
+
+// DeepSeek 的 /models 用 effort.supported_levels 声明推理档位（与 OpenRouter 的
+// reasoning.supported_efforts 不同名）。DeepSeek 通过 thinking.type=disabled 关闭思考，
+// 所以 canDisable 恒为真。
+export function parseEffortMetadata(row: any): ReasoningCapabilities | null {
+  const effort = row?.effort;
+  if (!effort || typeof effort !== 'object') return null;
+  const levels = Array.isArray(effort.supported_levels) ? effort.supported_levels.filter(isEffort) : [];
+  if (!levels.length) return null;
+  return {
+    status: 'supported',
+    efforts: levels.filter((e: ReasoningEffort) => e !== 'none'),
+    canEnable: true,
+    canDisable: true,
+    mandatory: false,
+    defaultEffort: isEffort(effort.default_level) ? effort.default_level : undefined,
+    source: 'api',
+    detail: '根据模型接口返回的可用推理档位。',
+  };
+}
+
+// 上下文窗口 / 输出上限 / 输入模态。各协议字段名不同，按优先级取值。
+export function parseModelLimits(row: any): { contextWindow?: number; maxOutputTokens?: number; inputModalities?: string[] } {
+  if (!row || typeof row !== 'object') return {};
+  const contextWindow = Number(row.context_window ?? row.context_length);
+  const maxOutputTokens = Number(row.max_output_tokens ?? row.max_completion_tokens);
+  return {
+    contextWindow: Number.isFinite(contextWindow) && contextWindow > 0 ? Math.trunc(contextWindow) : undefined,
+    maxOutputTokens: Number.isFinite(maxOutputTokens) && maxOutputTokens > 0 ? Math.trunc(maxOutputTokens) : undefined,
+    inputModalities: Array.isArray(row.input_modalities)
+      ? row.input_modalities.filter((m: unknown) => typeof m === 'string')
+      : undefined,
+  };
+}
+
+// 原生联网能力是「协议 + 模型」的组合事实，接口通常不声明，按已核实的协议规则判定。
+export function resolveSearchCapability(protocol: string): { webSearch: boolean; forceSearch: boolean } {
+  // OpenAI：Responses API 的 web_search 工具，且支持 tool_choice 强制。
+  if (protocol === 'openai') return { webSearch: true, forceSearch: true };
+  // DeepSeek：声明 deepseek_web_search 后由模型自行决定是否搜索，tool_choice 不能指定该工具，
+  // 因此支持自动联网，无法保证强制联网。
+  if (protocol === 'deepseek') return { webSearch: true, forceSearch: false };
+  // OpenRouter / 自定义兼容接口：未接入 web 插件，视为不支持原生搜索。
+  return { webSearch: false, forceSearch: false };
+}
+
+// 把探测结果写回 Provider 能力快照，供运行期（搜索决策、上下文预算）读取。
+// 不递增 config_version：能力是派生数据，不应让已锁定会话误判配置变更。
+function syncProviderCapabilities(provider: ProviderConfig, catalog: ModelCatalog): void {
+  try {
+    const prev = provider.capabilities;
+    const next = {
+      ...(prev ?? { models: [], context_window: DEFAULT_CONTEXT_WINDOW }),
+      context_window: catalog.contextWindow,
+      web_search: catalog.webSearch,
+      force_search: catalog.forceSearch,
+      thinking: catalog.reasoning.status === 'supported',
+      tool_calls: catalog.webSearch || !!prev?.tool_calls,
+    };
+    const unchanged =
+      prev &&
+      prev.context_window === next.context_window &&
+      prev.web_search === next.web_search &&
+      prev.force_search === next.force_search &&
+      prev.thinking === next.thinking &&
+      prev.tool_calls === next.tool_calls;
+    if (!unchanged) repo.providers.setCapabilities(provider.id, next);
+  } catch {
+    // 同步失败不影响本次能力读取
+  }
 }
 
 // 官方 /models 未列出档位时的保守回退；只匹配已核实的 ID 和日期快照。
@@ -103,11 +188,27 @@ export async function getModelCatalog(provider: ProviderConfig, model: string, r
     void result.then(r => { if (r.warning && cache.get(key) === entry) entry!.until = Date.now() + 15_000; });
   }
   const { rows, warning } = await entry.result;
-  const row = rows.find(r => r.id === model);
+  const row = rows.find(r => r.id === model) ?? rows.find(r => r.id === resolveModelAlias(model));
   const protocol = reasoningProtocol(provider);
-  const reasoning = parseReasoningMetadata(row) ?? documentedReasoning(protocol, model);
+  // 推理能力：OpenRouter 风格 → DeepSeek effort → 内置规则回退
+  const reasoning = parseReasoningMetadata(row) ?? parseEffortMetadata(row) ?? documentedReasoning(protocol, model);
   if (protocol === "openai" && !reasoning.efforts.length) reasoning.canEnable = false;
-  return { models: [...new Set([model, provider.default_model, ...rows.map(r => r.id)].filter(Boolean))], model, reasoning, warning };
+
+  const limits = parseModelLimits(row);
+  const search = resolveSearchCapability(protocol);
+  const catalog: ModelCatalog = {
+    models: [...new Set([model, provider.default_model, ...rows.map(r => r.id)].filter(Boolean))],
+    model,
+    reasoning,
+    contextWindow: limits.contextWindow ?? provider.capabilities?.context_window ?? DEFAULT_CONTEXT_WINDOW,
+    maxOutputTokens: limits.maxOutputTokens,
+    inputModalities: limits.inputModalities ?? ["text"],
+    webSearch: search.webSearch,
+    forceSearch: search.forceSearch,
+    warning,
+  };
+  syncProviderCapabilities(provider, catalog);
+  return catalog;
 }
 
 export function reasoningRequest(mode: ThinkMode, cap: ReasoningCapabilities, protocol: string, responses = false): Record<string, unknown> {

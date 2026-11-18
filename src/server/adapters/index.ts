@@ -13,7 +13,10 @@ export function defaultCapabilities(type: ProviderConfig["type"]): ProviderCapab
     case "openai":
       return { web_search: true, thinking: true, tool_calls: true, force_search: true, models: [], context_window: 128000 };
     case "deepseek":
-      return { web_search: false, thinking: true, tool_calls: false, force_search: false, models: [], context_window: 64000 };
+      // DeepSeek 用 deepseek_web_search 工具原生联网：模型自行决定是否搜索，
+      // tool_choice 不能强制，因此 force_search 为 false。
+      // 上下文窗口在能力探测后会被接口返回的真实值覆盖。
+      return { web_search: true, thinking: true, tool_calls: true, force_search: false, models: [], context_window: 128000 };
     case "openrouter":
     case "custom":
       return { web_search: false, thinking: false, tool_calls: false, force_search: false, models: [], context_window: 32000 };
