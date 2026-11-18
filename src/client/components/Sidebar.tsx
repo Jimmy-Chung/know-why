@@ -49,8 +49,8 @@ export function Sidebar(props: SidebarProps) {
       <div className="brand">
         <img className="brand-logo" src={brandIcon} width={32} height={32} alt="" />
         <span>
-          <span className="brand-wordmark">know why</span>
-          <small>沿着术语，继续追问。</small>
+          <span className="brand-wordmark">KNOW WHY</span>
+          <small>从一个词，读懂概念。</small>
         </span>
       </div>
 

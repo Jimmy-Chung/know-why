@@ -1,5 +1,5 @@
 /*!
-Copyright 2021 The Workbench Project Authors (https://github.com/jenskutilek/homecomputer-fonts)
+Copyright 2020 The Martian Mono Project Authors (https://github.com/evilmartians/mono)
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:
@@ -94,9 +94,9 @@ FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
 OTHER DEALINGS IN THE FONT SOFTWARE.
 */
 @font-face {
-  font-family: "Workbench";
-  src: url("./workbench-latin-400.woff2") format("woff2");
+  font-family: "Martian Mono";
+  src: url("./martian-mono-latin-800.woff2") format("woff2");
   font-style: normal;
-  font-weight: 400;
+  font-weight: 800;
   font-display: swap;
 }
