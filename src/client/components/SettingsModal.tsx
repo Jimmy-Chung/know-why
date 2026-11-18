@@ -1,6 +1,6 @@
 import { IconButton } from "./ui/Button.js";
-import React, { useState } from "react";
-import type { ProviderConfig, ProviderType } from "../../shared/types.js";
+import React, { useEffect, useState } from "react";
+import type { ProviderCapabilities, ProviderConfig, ProviderType } from "../../shared/types.js";
 import { api } from "../api.js";
 
 interface SettingsModalProps {
@@ -10,6 +10,13 @@ interface SettingsModalProps {
 }
 
 type Tab = "provider" | "data";
+
+function officialHost(type: ProviderType): string {
+  if (type === "openai") return "api.openai.com";
+  if (type === "deepseek") return "api.deepseek.com";
+  if (type === "openrouter") return "openrouter.ai";
+  return "";
+}
 
 export function SettingsModal({ providers, onClose, onSaved }: SettingsModalProps) {
   const [tab, setTab] = useState<Tab>("provider");
@@ -40,6 +47,16 @@ export function SettingsModal({ providers, onClose, onSaved }: SettingsModalProp
   const [pKey, setPKey] = useState("");
   const [pDefault, setPDefault] = useState(false);
 
+  // 保存前验证：连接类字段任何改动都会让验证失效
+  type VerifyState = { status: "idle" | "pending" | "ok" | "err"; text: string; capabilities?: ProviderCapabilities; resolvedModel?: string };
+  const [verify, setVerify] = useState<VerifyState>({ status: "idle", text: "" });
+  const [initial, setInitial] = useState<{ type: ProviderType; base: string; model: string } | null>(null);
+  useEffect(() => {
+    setVerify({ status: "idle", text: "" });
+  }, [pType, pBase, pModel, pKey, editingId]);
+  const connectionDirty = !initial || pType !== initial.type || pBase !== initial.base || pModel !== initial.model || pKey.trim() !== "";
+  const canSave = verify.status === "ok" || (!connectionDirty && !!editingId);
+
   const resetForm = () => {
     setEditingId(null);
     setPType("openai");
@@ -48,6 +65,8 @@ export function SettingsModal({ providers, onClose, onSaved }: SettingsModalProp
     setPModel("");
     setPKey("");
     setPDefault(false);
+    setInitial(null);
+    setVerify({ status: "idle", text: "" });
   };
 
   // 点「编辑」：把现有 provider 字段填入表单，切到编辑模式（type 不可改）
@@ -59,6 +78,7 @@ export function SettingsModal({ providers, onClose, onSaved }: SettingsModalProp
     setPModel(p.default_model);
     setPKey(""); // key 留空表示保持不变
     setPDefault(p.is_default);
+    setInitial({ type: p.type, base: p.api_base, model: p.default_model });
     clearNote();
   };
 
@@ -80,9 +100,44 @@ export function SettingsModal({ providers, onClose, onSaved }: SettingsModalProp
     }
   };
 
+  // 保存前验证：只读 /models，不落库、不消耗对话额度
+  const doVerify = async () => {
+    clearNote();
+    if (!pModel.trim()) {
+      setVerify({ status: "err", text: "请先填写默认模型" });
+      return;
+    }
+    if (!pKey.trim() && !editingId && pType !== "custom") {
+      setVerify({ status: "err", text: "请先填写 API Key" });
+      return;
+    }
+    setVerify({ status: "pending", text: "验证中…" });
+    try {
+      const r = await api.verifyProvider({
+        type: pType,
+        api_base: pBase,
+        api_key: pKey,
+        model: pModel.trim(),
+        provider_id: editingId ?? undefined,
+      });
+      if (r.ok) {
+        setVerify({ status: "ok", text: r.detail, capabilities: r.capabilities, resolvedModel: r.resolvedModel });
+      } else {
+        const extra = r.availableModels?.length ? `（可用示例：${r.availableModels.slice(0, 5).join("、")}）` : "";
+        setVerify({ status: "err", text: `${r.detail}${extra}` });
+      }
+    } catch (e) {
+      setVerify({ status: "err", text: (e as Error).message });
+    }
+  };
+
   // 保存 provider：新建走 POST，编辑走 PATCH；key 留空表示保持不变
   const saveProvider = async () => {
     clearNote();
+    if (!canSave) {
+      showNote("请先点击「验证连接」，通过后再保存", "err");
+      return;
+    }
     if (!pName.trim()) {
       showNote("请填写名称", "err");
       return;
@@ -98,6 +153,7 @@ export function SettingsModal({ providers, onClose, onSaved }: SettingsModalProp
           api_base: pBase,
           default_model: pModel,
           is_default: pDefault,
+          capabilities: verify.status === "ok" ? verify.capabilities : undefined,
         });
         if (pKey.trim()) await api.setProviderSecret(editingId, pKey);
         await onSaved();
@@ -110,7 +166,7 @@ export function SettingsModal({ providers, onClose, onSaved }: SettingsModalProp
           api_base: pBase,
           default_model: pModel,
           is_default: pDefault,
-          capabilities: undefined as any,
+          capabilities: verify.status === "ok" ? verify.capabilities : undefined,
         });
         if (pKey.trim()) await api.setProviderSecret(p.id, pKey);
         await onSaved();
@@ -243,13 +299,17 @@ export function SettingsModal({ providers, onClose, onSaved }: SettingsModalProp
               </label>
               <label className="field">
                 默认模型
-                <input value={pModel} onChange={(e) => setPModel(e.target.value)} placeholder={pType === "openai" ? "gpt-4o-mini" : pType === "deepseek" ? "deepseek-chat" : "模型ID"} />
+                <input value={pModel} onChange={(e) => setPModel(e.target.value)} placeholder={pType === "openai" ? "gpt-4o-mini" : pType === "deepseek" ? "deepseek-flash" : "模型ID"} />
               </label>
             </div>
-            <label className="field">
-              接口地址（留空走官方默认；自定义必填）
-              <input value={pBase} onChange={(e) => setPBase(e.target.value)} placeholder={pType === "custom" ? "https://your-host/v1" : ""} />
-            </label>
+            {pType === "custom" ? (
+              <label className="field">
+                接口地址（必填）
+                <input value={pBase} onChange={(e) => setPBase(e.target.value)} placeholder="https://your-host/v1" />
+              </label>
+            ) : (
+              <p className="settings-description">接口地址：使用官方默认（{officialHost(pType)}），无需填写。</p>
+            )}
             <label className="field">
               API Key{editingId ? "（留空保持不变）" : ""}
               <input type="password" value={pKey} onChange={(e) => setPKey(e.target.value)} placeholder={editingId ? "留空保持当前 Key 不变" : "sk-..."} />
@@ -260,9 +320,26 @@ export function SettingsModal({ providers, onClose, onSaved }: SettingsModalProp
             </div>
             <div className="settings-actions">
               {editingId && <button onClick={resetForm}>取消编辑</button>}
-              <span />
-              <button className="save" onClick={saveProvider}>{editingId ? "保存修改" : "保存 Provider"}</button>
+              <button className="test" onClick={doVerify} disabled={verify.status === "pending"}>
+                {verify.status === "pending" ? "验证中…" : "验证连接"}
+              </button>
+              <button
+                className="save"
+                onClick={saveProvider}
+                disabled={!canSave}
+                title={canSave ? "" : "请先验证连接，通过后再保存"}
+              >
+                {editingId ? "保存修改" : "保存 Provider"}
+              </button>
             </div>
+            {verify.status !== "idle" && (
+              <div className={`settings-note ${verify.status === "ok" ? "ok" : verify.status === "err" ? "err" : ""}`} role="status">
+                {verify.text}
+              </div>
+            )}
+            {verify.status === "ok" && verify.resolvedModel && verify.resolvedModel !== pModel.trim() && (
+              <div className="settings-note ok">已按别名匹配到 {verify.resolvedModel}（保存后仍使用你填写的模型名）</div>
+            )}
             <div className={`settings-note ${note.kind}`}>{note.text}</div>
           </div>
         )}
