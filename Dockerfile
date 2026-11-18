@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 # Know Know 生产镜像：单进程 Node 服务，同时托管前端静态资源与本地 SQLite。
 #
 # 构建：docker build -t know-know:1.3.0 .
