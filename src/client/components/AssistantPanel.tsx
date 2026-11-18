@@ -354,9 +354,6 @@ export function AssistantPanel({ conv, provider, messages, cards, allMessages, c
           <IconButton onClick={onClose} icon="close" label="关闭助手" />
         </div>
       </div>
-      <div className="assistant-scope" title={scopeCardIds.length ? `检索范围：${scopeCardIds.length} 张指定卡片` : `检索范围：当前会话「${conv.title}」的全部分支`}>
-        <Icon name="branch" /><span>{scopeCardIds.length ? `已限定 ${scopeCardIds.length} 张卡片` : "本会话 · 全部分支"}</span><span>不联网</span>
-      </div>
       {showHistory ? (
         // 历史列表展开时：取代主区，只列线程标题；点击即打开该问答到主区并收起列表
         threads.length > 0 ? (
