@@ -1,6 +1,6 @@
 {
   "name": "know-why",
-  "version": "1.19.1",
+  "version": "1.19.2",
   "private": true,
   "description": "know why — 在对话中沿术语分支追问，随时回到原来的思路。",
   "type": "module",
