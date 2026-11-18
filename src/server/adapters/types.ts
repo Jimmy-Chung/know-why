@@ -1,6 +1,6 @@
 // Provider 适配器统一接口。
 // 每个适配器负责：连接测试、能力探测、聊天流式、（可选）原生搜索。
-// 独立搜索由独立的 TavilyAdapter 承担，与聊天 Provider 解耦。
+// 联网只使用 Provider 原生能力；独立搜索（Tavily）已移除。
 
 import type { ProviderType, WebMode, ThinkMode } from "../../shared/types.js";
 
@@ -40,21 +40,6 @@ export interface Adapter {
   supportsNativeSearch(): boolean;
   // 是否支持原生思考参数
   supportsThinking(): boolean;
-}
-
-export interface SearchResultItem {
-  url: string;
-  title: string;
-  snippet: string;
-  content: string; // 正文或摘要
-  content_kind: "full" | "snippet" | "search_summary";
-}
-
-export interface SearchAdapter {
-  name: string;
-  // 执行检索，返回带正文的资料
-  search(queries: string[], signal?: AbortSignal): Promise<{ results: SearchResultItem[]; raw: string }>;
-  testConnection(): Promise<{ ok: boolean; detail: string }>;
 }
 
 export class AdapterError extends Error {

@@ -17,12 +17,12 @@ import type {
 } from "../shared/types.js";
 import type { SSEEvent } from "../shared/types.js";
 import * as repo from "./repo.js";
-import { createAdapter, createSearchAdapter } from "./adapters/index.js";
-import type { Adapter, StreamEvent, SearchResultItem } from "./adapters/types.js";
+import { createAdapter } from "./adapters/index.js";
+import type { Adapter, StreamEvent } from "./adapters/types.js";
 import { AdapterError } from "./adapters/types.js";
 import { buildContext, buildContextWithIds, assistantSystemPrompt, defaultSystemPrompt } from "./context.js";
 import { maybeCompressContext } from "./summary.js";
-import { completeChat, parseQueryPlan, type QueryPlan } from "./complete.js";
+import { completeChat } from "./complete.js";
 import { markdownToPlaintext } from "./selection.js";
 import { indexConversation, indexEmbeddings, retrievePassages } from "./knowledge.js";
 import { assistantHistory, retrievalQuestion, buildRagRequest } from "./rag.js";
@@ -324,39 +324,14 @@ export async function executeRun(conv: Conversation, card: Card, run: Run, opts:
       // 摘要过程异常（非业务失败）：继续使用原文
     }
 
-    // 搜索策略
-    let injectedContext = context;
+    // 搜索策略：只使用模型原生联网，由适配器在 stream 内执行；不再接入独立搜索。
     const sources: Source[] = [];
-    if (conv.web_mode !== "off") emit(run.id, { type: "status", run_id: run.id, status: "running", detail: "规划搜索……" });
-    const searchPlan = await decideSearch(conv, provider, context, controller.signal);
+    const searchPlan = await decideSearch(conv, provider, controller.signal);
     touchRun(run.id);
-    if (searchPlan.kind === "independent" && searchPlan.queries.length) {
-      emit(run.id, { type: "searching", run_id: run.id, queries: searchPlan.queries, service: searchPlan.service });
-      repo.runs.update(run.id, { status: "searching" });
-      const results = await searchPlan.doSearch();
-      if (results.length) {
-        for (const r of results) {
-          emit(run.id, { type: "reading", run_id: run.id, url: r.url });
-          const src = repo.sources.create({
-            run_id: run.id,
-            conversation_id: conv.id,
-            url: r.url,
-            title: r.title,
-            snippet: r.snippet,
-            content_kind: r.content_kind,
-            citation_message_id: assistantMsg.id,
-          });
-          sources.push(src);
-        }
-        emit(run.id, { type: "sources", run_id: run.id, sources });
-        injectedContext = injectSearchResults(context, results, searchPlan.queries);
-      }
-    } else if (searchPlan.kind === "native") {
-      // 由适配器在 stream 内处理
-    } else if (searchPlan.kind === "failed_force") {
-      // 强制搜索但无可用服务：明确报错，不静默退化
+    if (searchPlan.kind === "failed_force") {
+      // 强制联网但模型/接口无法保证：明确报错，不静默退化
       throw new AdapterError(
-        searchPlan.reason || "强制搜索已启用，但未配置可用的搜索服务，且模型无原生搜索能力。请在设置中配置独立搜索或改为不联网。",
+        searchPlan.reason || "当前模型不支持联网，无法执行强制联网。请更换支持联网的模型，或改为不联网。",
         "capability",
       );
     }
@@ -364,7 +339,7 @@ export async function executeRun(conv: Conversation, card: Card, run: Run, opts:
     // 流式生成
     const stream = adapter.stream({
       model: conv.model,
-      messages: injectedContext,
+      messages: context,
       webMode: searchPlan.kind === "native" ? conv.web_mode : "off",
       thinkMode: conv.think_mode,
       reasoning: modelCapabilities?.reasoning,
@@ -524,15 +499,17 @@ export async function retryRun(runId: string): Promise<Run | null> {
 
 // ---- 搜索决策 ----
 
+
 type SearchPlan =
   | { kind: "none" }
   | { kind: "native" }
-  | { kind: "independent"; queries: string[]; service: string; doSearch: () => Promise<SearchResultItem[]> }
   | { kind: "failed_force"; reason?: string };
 
-async function decideSearch(conv: Conversation, provider: any, context: any, signal: AbortSignal): Promise<SearchPlan> {
+// 联网只使用模型原生能力：不再接入独立搜索服务（Tavily 已移除）。
+async function decideSearch(conv: Conversation, provider: any, signal: AbortSignal): Promise<SearchPlan> {
   const webMode = conv.web_mode as WebMode;
   if (webMode === "off") return { kind: "none" };
+  signal.throwIfAborted();
 
   const adapter = await createAdapter(provider);
   // 能力以模型接口探测结果为准；探测失败时回退到 Provider 能力快照。
@@ -541,142 +518,22 @@ async function decideSearch(conv: Conversation, provider: any, context: any, sig
   const forceSearch = catalog?.forceSearch ?? !!provider.capabilities?.force_search;
   const nativeSearch = adapter.supportsNativeSearch() && webSearch;
 
-  // 自动：有原生搜索时交给模型自行决定是否联网
-  if (webMode === "auto" && nativeSearch) return { kind: "native" };
-  // 强制：只有接口能保证“实际执行检索”时才走原生，否则用独立搜索兜住强制语义
-  if (webMode === "force" && nativeSearch && forceSearch) return { kind: "native" };
-
-  // 无原生搜索 → 独立搜索
-  const searchAdapter = await createSearchAdapter();
-  if (!searchAdapter) {
+  if (!nativeSearch) {
     if (webMode === "force") {
-      return {
-        kind: "failed_force",
-        reason: nativeSearch
-          ? "该模型支持原生联网，但接口无法强制触发搜索。请配置独立搜索（Tavily），或改为「自动联网」。"
-          : undefined,
-      };
+      return { kind: "failed_force", reason: "当前模型不支持联网。请更换支持联网的模型，或改为不联网。" };
     }
-    // auto 但无独立搜索：如实不搜索
     return { kind: "none" };
   }
-  const lastUser = [...context].reverse().find((m: any) => m.role === "user");
-  const question = lastUser?.content || "";
-
-  // auto：先用启发式对"明显需要/不需要搜索"的问题直接裁决，
-  // 避免为它们多花一次 LLM 规划 round-trip（~500ms）。模糊问题才升级到 LLM。
-  if (webMode === "auto") {
-    const verdict = quickSearchVerdict(question);
-    if (verdict === "skip") return { kind: "none" };
-    if (verdict === "need") {
-      const queries = [question.slice(0, 80) || "latest news"];
-      return {
-        kind: "independent", queries, service: searchAdapter.name,
-        doSearch: async () => (await searchAdapter.search(queries, signal)).results,
-      };
-    }
-    // verdict === null：模糊地带，落回 LLM 规划（与现状一致）
+  // 强制联网要求接口能保证「用户请求就必须检索」；DeepSeek 等只能由模型自行决定。
+  if (webMode === "force" && !forceSearch) {
+    return {
+      kind: "failed_force",
+      reason: "当前模型的接口无法强制联网（搜索由模型自行决定）。请改为「自动联网」。",
+    };
   }
-
-  // 决定查询（force 或 auto 的模糊地带）
-  let plan: QueryPlan;
-  if (webMode === "force") {
-    const q = await planQueries(provider, conv.model, context, true, signal);
-    plan = { search: true, queries: q.queries.length ? q.queries : [fallbackQuery(context)] };
-  } else {
-    plan = await planQueries(provider, conv.model, context, false, signal);
-  }
-  if (!plan.search || !plan.queries.length) return { kind: "none" };
-
-  return {
-    kind: "independent",
-    queries: plan.queries,
-    service: searchAdapter.name,
-    doSearch: async () => {
-      const res = await searchAdapter.search(plan.queries, signal);
-      return res.results;
-    },
-  };
+  return { kind: "native" };
 }
 
-async function planQueries(provider: any, model: string, context: any, force: boolean, signal: AbortSignal): Promise<QueryPlan> {
-  const lastUser = [...context].reverse().find((m: any) => m.role === "user");
-  if (!lastUser) return { search: false, queries: [] };
-  const prompt = [
-    "You are a search query planner. Based on the user's latest question, decide whether web search is needed, and generate 1-3 concise search queries IN ENGLISH.",
-    "Always generate queries in English regardless of the user's language — English queries return the most authoritative and globally relevant results; the answering model will translate as needed.",
-    force ? "This round must search; please provide queries." : "If the question does not need fresh or external info, you may skip searching.",
-    'Return JSON only: {"search": true/false, "queries": ["...", "..."]}',
-    `User's latest question: ${lastUser.content}`,
-  ].join("\n");
-  try {
-    const text = await completeChat(provider, model, [{ role: "user", content: prompt }], { json: true, signal });
-    const p = parseQueryPlan(text);
-    if (force && !p.queries.length) p.queries = [fallbackQuery(context)];
-    return p;
-  } catch {
-    if (force) return { search: true, queries: [fallbackQuery(context)] };
-    return { search: false, queries: [] };
-  }
-}
-
-function fallbackQuery(context: any): string {
-  const lastUser = [...context].reverse().find((m: any) => m.role === "user");
-  return (lastUser?.content || "").slice(0, 80) || "latest news";
-}
-
-// 快速启发式判定：对"明显需要/不需要搜索"的问题在 auto 模式下直接决策，避免为它们
-// 多花一次 LLM 规划 round-trip（~500ms）。只有两方都不命中的"模糊问题"才升级到 LLM 规划，
-// 保证准确度不受影响。返回 "need" | "skip" | null。
-export function quickSearchVerdict(question: string): "need" | "skip" | null {
-  const q = question.trim();
-  if (!q) return null;
-
-  // 需要搜索的强信号（中文做子串匹配；\b 对中文无效勿用）
-  const needWords = [
-    // 时效性
-    "今天", "今早", "今日", "昨天", "前天", "明天", "去年", "今年", "上周", "上月", "上个月", "现在", "最新", "最近", "实时", "目前", "当前",
-    // 实时/外部信息
-    "新闻", "天气", "气温", "降温", "降雪", "下雨", "台风", "地震", "疫情", "热搜", "排行榜", "榜单", "股价", "股票", "油价", "金价", "涨停", "跌停",
-    // 财报/经济
-    "财报", "营收", "净利润", "市值", "汇率", "比分",
-    // 赛事/发布
-    "赛程", "赛果", "预览", "发布会", "新款", "开售", "开卖", "预售", "上线", "下线", "更新至",
-  ];
-  for (const w of needWords) if (q.includes(w)) return "need";
-  // 价格/钞票类即时查询（排除定义类提问）
-  if (/(多少钱|值多少|换多少钱|贵不贵|便宜|升值|贬值)/.test(q) && !/(什么是|解释|讲讲|介绍)/.test(q)) return "need";
-  // 带年份的时效话题
-  if (/(20\d{2}|19\d{2})年/.test(q) && /(新闻|事件|情况|进展|结果|现状|数据|统计|报告|行情|更新|版本|发布|成绩)/.test(q)) return "need";
-  // 外链
-  if (/https?:\/\/|www\./.test(q)) return "need";
-
-  // 不需要搜索的强信号
-  const greeting = /^(hi|hello|hey|你好|您好|嗨|哈喽|在吗|喂|早上好|早安|中午好|下午好|晚上好|晚安|谢谢|感谢|多谢|辛苦了|收到|好的|明白|嗯|再见|拜拜)/i.test(q);
-  if (greeting) return "skip";
-  // 纯数字/算式
-  if (/^[\s\d+\-*/÷×^=?%(),。，.]+$/.test(q)) return "skip";
-  // 代码块或涉及代码的请求
-  if (/^(```|~~~)/.test(q) || /`[a-zA-Z_][\w-]*`/.test(q)) return "skip";
-  // 引用上文/追问上文
-  if (/(上面|上一条|你刚才|你之前|刚刚|接着|继续)/.test(q) && q.length <= 20) return "skip";
-
-  return null; // 模糊地带 → 走 LLM 规划
-}
-
-function injectSearchResults(context: any, results: SearchResultItem[], queries: string[]): any[] {
-  const materials = results
-    .slice(0, 6)
-    .map((r, i) => `[${i + 1}] ${r.title}\nURL: ${r.url}\n${r.content_kind === "full" ? r.content.slice(0, 1200) : r.snippet}`)
-    .join("\n\n");
-  const sys = context.find((m: any) => m.role === "system");
-  const rest = context.filter((m: any) => m.role !== "system");
-  const searchSystem = {
-    role: "system",
-    content: `以下是联网检索到的资料（查询：${queries.join("；")}）。请基于这些资料回答，并在文中用 [序号] 标注来源。若资料语言与你的回答语言不同，请自行翻译整理。\n\n${materials}`,
-  };
-  return [sys, searchSystem, ...rest].filter(Boolean);
-}
 
 // ---- 知识助手 ----
 

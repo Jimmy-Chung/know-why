@@ -1,11 +1,9 @@
 // 适配器工厂：根据 ProviderConfig 与系统凭据创建适配器实例。
 import { OpenAIAdapter, DeepSeekAdapter, CustomAdapter } from "./openai.js";
-import { TavilyAdapter } from "./tavily.js";
-import type { Adapter, SearchAdapter } from "./types.js";
+import type { Adapter } from "./types.js";
 import type { ProviderConfig, ProviderCapabilities } from "../../shared/types.js";
 import { reasoningProtocol, providerBase } from "../model-capabilities.js";
 import { getSecret } from "../secret.js";
-import * as repo from "../repo.js";
 
 // 默认能力表（按类型；连接测试后可更新）
 export function defaultCapabilities(type: ProviderConfig["type"]): ProviderCapabilities {
@@ -41,12 +39,4 @@ export async function createAdapter(provider: ProviderConfig): Promise<Adapter> 
   }
 }
 
-export async function createSearchAdapter(): Promise<SearchAdapter | null> {
-  const cfg = repo.search.get();
-  if (!cfg || !cfg.enabled || cfg.provider !== "tavily") return null;
-  const key = cfg.has_secret ? await getSecret(cfg.secret_ref) : null;
-  if (!key) return null;
-  return new TavilyAdapter(key, cfg.api_base);
-}
-
-export { OpenAIAdapter, DeepSeekAdapter, CustomAdapter, TavilyAdapter };
+export { OpenAIAdapter, DeepSeekAdapter, CustomAdapter };

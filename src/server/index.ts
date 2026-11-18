@@ -24,7 +24,7 @@ import {
   recoverStalledRuns,
   startRunWatchdog,
 } from "./orchestrator.js";
-import { defaultCapabilities, createAdapter, createSearchAdapter } from "./adapters/index.js";
+import { defaultCapabilities, createAdapter } from "./adapters/index.js";
 import { setSecret, deleteSecret, maskSecret } from "./secret.js";
 import { resolveAnchor, markdownToPlaintext, locateAnchor } from "./selection.js";
 import { buildBranchSnapshot, buildContext, assistantSystemPrompt } from "./context.js";
@@ -160,36 +160,6 @@ app.get("/api/providers/:id/models", async (c) => {
   const p = repo.providers.get(c.req.param("id"));
   if (!p) return c.json({ error: "Provider 不存在" }, 404);
   return c.json(await getModelCatalog(p, c.req.query("model") || p.default_model, c.req.query("refresh") === "1"));
-});
-
-// ---- 搜索配置 ----
-app.get("/api/search", (c) => c.json(repo.search.get()));
-
-app.put("/api/search", async (c) => {
-  const body = await c.req.json();
-  const cfg = repo.search.upsert({
-    provider: "tavily",
-    api_base: body.api_base || "",
-    has_secret: !!body.has_secret,
-    secret_ref: "search:tavily",
-    enabled: body.enabled !== false,
-  });
-  return c.json(cfg);
-});
-
-app.put("/api/search/secret", async (c) => {
-  const body = await c.req.json();
-  if (body.key) {
-    await setSecret("search:tavily", body.key);
-    repo.search.upsert({ provider: "tavily", api_base: body.api_base || "", has_secret: true, secret_ref: "search:tavily", enabled: true });
-  }
-  return c.json({ ok: true });
-});
-
-app.post("/api/search/test", async (c) => {
-  const adapter = await createSearchAdapter();
-  if (!adapter) return c.json({ ok: false, detail: "未配置独立搜索或缺少凭据" });
-  return c.json(await adapter.testConnection());
 });
 
 // ---- 会话 ----
