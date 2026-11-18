@@ -182,7 +182,7 @@ function CardFace(props: {
   pendingScroll?: { cardId: string; messageId: string } | null;
   onConsumedScroll?: () => void;
 }) {
-  const { card, messages, draft, anchors, termLinks, conv, provider, onSendMessage, onCreateAnchor, onExplore, onExploreTerm, onCleanStaleTermLinks, onStop, onRetry, onSaveDraft, activeRuns, onSelectCard, runStatuses } = props;
+  const { card, messages, draft, anchors, termLinks, conv, onSendMessage, onCreateAnchor, onExplore, onExploreTerm, onCleanStaleTermLinks, onStop, onRetry, onSaveDraft, activeRuns, onSelectCard, runStatuses } = props;
   const [input, setInput] = useState(draft?.text || "");
   const [pendingQuote, setPendingQuote] = useState<SelectionAnchor | null>(null);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -404,12 +404,6 @@ function CardFace(props: {
           <div className="welcome">
             <div className="welcome-symbol"><Icon name="leaf" /></div>
             <p>提出你的问题，开始这段探索。</p>
-            {provider && (
-              <div className="suggestions">
-                <button onClick={() => setInput("帮我梳理这个概念的整体脉络")}>梳理脉络</button>
-                <button onClick={() => setInput("这背后的关键原理是什么？")}>追问原理</button>
-              </div>
-            )}
           </div>
         )}
         {messages.map((m) => (
