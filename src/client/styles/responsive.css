@@ -8,13 +8,10 @@
 .sidebar-collapsed .sidebar { transform: translateX(-100%); opacity: 0; visibility: hidden; transition: transform var(--motion-panel) var(--ease-out), opacity var(--motion-panel) ease, visibility 0s var(--motion-panel); }
 .sidebar-collapsed .navigation-toggle { left: 16px; }
 .sidebar-collapsed .header { padding-left: 68px; }
-/* 助手打开时主卡片区占满原树列，树画布在原区域绝对定位；
-   hover 前后共用同一视图，不重新挂载或改变画布尺寸。 */
-.workspace--assistant .content { grid-template-columns: minmax(0, 1fr); position: relative; }
-/* 树在助手打开时完全隐藏（display:none），.chat-pane 若仍保两列会留下 --tree-width 的空隙
-   （桌面 192px），故同时坍缩为单列让卡片占满。 */
-.workspace--assistant .chat-pane { grid-template-columns: minmax(0, 1fr); }
-.workspace--assistant .main { padding-inline: var(--space-4); }
+/* Keep both grid tracks during transitions so the reading column can resize smoothly. */
+.chat-pane { transition: grid-template-columns var(--motion-panel) var(--ease-out); }
+.workspace--assistant .chat-pane { grid-template-columns: minmax(0, 1fr) 0px; }
+.header { transition: padding-left var(--motion-panel) var(--ease-out); }
 @media (max-width: 1279px) {
   :root { --sidebar-width: 224px; --tree-width: 96px; }
   .brand { gap: var(--space-2); font-size: var(--text-md); }
@@ -22,14 +19,16 @@
   .header { padding-inline: var(--space-5); }
   .main { padding-inline: var(--space-4); }
   .assistant-panel { position: absolute; inset: 0 0 0 auto; --assistant-panel-size: min(var(--assistant-width, 440px), 100%); width: var(--assistant-panel-size); box-shadow: var(--shadow-dialog); z-index: calc(var(--z-panel) + 3); }
-  .assistant-backdrop { display: block; position: absolute; inset: 0; background: var(--scrim); z-index: calc(var(--z-panel) + 2); }
+  .assistant-backdrop { transition: opacity var(--motion-panel); display: block; position: absolute; inset: 0; background: var(--scrim); z-index: calc(var(--z-panel) + 2); }
 }
+@starting-style { .assistant-backdrop { opacity: 0; } }
+.assistant-backdrop[data-closing="true"] { opacity: 0; pointer-events: none; }
 @media (max-width: 700px) {
   :root { --text-body: 15px; --tree-width: 64px; --card-content-gutter: var(--space-3); }
   .app, .app.sidebar-collapsed { grid-template-columns: minmax(0, 1fr); }
   .sidebar { position: fixed; inset: 0 auto 0 0; width: 272px; z-index: var(--z-navigation); box-shadow: var(--shadow-dialog); padding-top: var(--space-6); }
-  .navigation-backdrop { display: block; position: fixed; inset: 0; background: var(--scrim); z-index: calc(var(--z-navigation) - 1); }
-  .sidebar-collapsed .navigation-backdrop { display: none; }
+  .navigation-backdrop { transition: opacity var(--motion-panel), visibility 0s; display: block; position: fixed; inset: 0; background: var(--scrim); z-index: calc(var(--z-navigation) - 1); }
+  .sidebar-collapsed .navigation-backdrop { opacity: 0; visibility: hidden; pointer-events: none; transition-delay: 0s, var(--motion-panel); }
   .navigation-toggle { left: 226px; }
   .sidebar-collapsed .navigation-toggle { left: 12px; }
   .header, .sidebar-collapsed .header { padding: var(--space-4) var(--space-3) var(--space-4) 56px; min-height: 88px; gap: var(--space-2); }
@@ -48,7 +47,7 @@
   .composer-setting select { max-width: 98px; }
   .attach-btn { padding-inline: var(--space-2); }
   .tree-panel { padding: var(--space-5) 0; }
-  .app:has(.workspace--assistant) .navigation-toggle { display: none; }
+  .app:has(.assistant-panel) .navigation-toggle { display: none; }
   .assistant-panel { position: absolute; --assistant-panel-size: 100%; width: 100%; padding: var(--space-4); }
   .assistant-resize-handle { display: none; }
   .modal, .card-preview-overlay { padding: var(--space-3); }
@@ -58,3 +57,4 @@
 }
 @media (hover: none) { .session-row .del { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+@media (hover: none) { .mention-status small { display: none; } }

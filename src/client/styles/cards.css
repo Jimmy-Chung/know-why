@@ -193,18 +193,3 @@
   line-height: 1; padding: 0 4px; cursor: pointer; border-radius: 50%;
 }
 .scope-chip-remove:hover { color: var(--danger); }
-.mention-picker {
-  min-width: 200px; max-width: 280px; background: var(--surface);
-  border: 1px solid var(--border); border-radius: var(--radius-md);
-  box-shadow: var(--shadow-popover); padding: 4px; overflow: hidden;
-}
-.mention-item {
-  display: flex; align-items: center; gap: 6px; width: 100%; padding: 6px 8px;
-  border: 0; background: transparent; color: var(--text); font-size: var(--text-sm);
-  text-align: left; cursor: pointer; border-radius: var(--radius-sm);
-  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
-}
-.mention-item .ui-icon { flex-shrink: 0; color: var(--muted); }
-.mention-item.active, .mention-item:hover { background: var(--soft); }
-.mention-item.active .ui-icon { color: var(--accent); }
-

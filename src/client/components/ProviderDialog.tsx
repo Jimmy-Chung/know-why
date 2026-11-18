@@ -1,11 +1,12 @@
 import { IconButton } from "./ui/Button.js";
 import React, { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
+import { DialogSurface } from "./ui/DialogSurface.js";
 import type { ProviderCapabilities, ProviderConfig, ProviderType } from "../../shared/types.js";
 import { api } from "../api.js";
 
 interface ProviderDialogProps {
   /** null = 新增 */
+  closing: boolean;
   provider: ProviderConfig | null;
   onClose: () => void;
   onSaved: () => Promise<void>;
@@ -25,7 +26,7 @@ type VerifyState = {
   resolvedModel?: string;
 };
 
-export function ProviderDialog({ provider, onClose, onSaved }: ProviderDialogProps) {
+export function ProviderDialog({ closing, provider, onClose, onSaved }: ProviderDialogProps) {
   const isEdit = !!provider;
   const [pType, setPType] = useState<ProviderType>(provider?.type ?? "openai");
   const [pName, setPName] = useState(provider?.name ?? "");
@@ -118,13 +119,10 @@ export function ProviderDialog({ provider, onClose, onSaved }: ProviderDialogPro
     }
   };
 
-  const body = (
-    <div className="modal" onClick={onClose}>
+  return (
+    <DialogSurface label={isEdit ? "编辑 Provider" : "添加 Provider"} closing={closing} onClose={onClose}>
       <div
         className="settings provider-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-label={isEdit ? "编辑 Provider" : "添加 Provider"}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="settings-header">
@@ -196,8 +194,6 @@ export function ProviderDialog({ provider, onClose, onSaved }: ProviderDialogPro
         )}
         {error && <div className="settings-note err" role="alert">{error}</div>}
       </div>
-    </div>
+    </DialogSurface>
   );
-
-  return createPortal(body, document.body);
 }

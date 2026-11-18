@@ -20,6 +20,8 @@ import { Workspace } from "./components/Workspace.js";
 import type { NoteEditorTarget } from "./components/Notes.js";
 import { SettingsModal } from "./components/SettingsModal.js";
 
+import { usePanelPresence } from "./usePanelPresence.js";
+
 export default function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => window.matchMedia("(max-width: 700px)").matches);
   const [providers, setProviders] = useState<ProviderConfig[]>([]);
@@ -44,6 +46,7 @@ export default function App() {
   const [currentThreadId, setCurrentThreadId] = useState<string | null>(null);
   const [currentCardId, setCurrentCardId] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const settingsPresent = usePanelPresence(showSettings);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [previewCardId, setPreviewCardId] = useState<string | null>(null);
   // 助手引用跳转：切卡后滚动并高亮到该回答消息
@@ -354,7 +357,7 @@ export default function App() {
   return (
     <div className={`app${sidebarCollapsed ? " sidebar-collapsed" : ""}`}>
       <IconButton className="navigation-toggle" icon="panel" label={sidebarCollapsed ? "展开会话导航" : "收起会话导航"} aria-expanded={!sidebarCollapsed} aria-controls="session-navigation" onClick={() => setSidebarCollapsed(v => !v)} />
-      {!sidebarCollapsed && <div className="navigation-backdrop" onClick={() => setSidebarCollapsed(true)} />}
+      <div className="navigation-backdrop" onClick={() => setSidebarCollapsed(true)} />
 
       <Sidebar
         collapsed={sidebarCollapsed}
@@ -420,8 +423,9 @@ export default function App() {
           </div>
         </div>
       )}
-      {showSettings && (
+      {settingsPresent && (
         <SettingsModal
+          closing={!showSettings}
           providers={providers}
           onClose={() => setShowSettings(false)}
           onSaved={async () => {

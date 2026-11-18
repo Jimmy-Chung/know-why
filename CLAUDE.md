@@ -1,4 +1,4 @@
-# Know Know — 项目约定
+# know why — 项目约定
 
 > 本文件记录项目的长期约定,所有开发(含 AI 协作)均遵循。
 
@@ -20,7 +20,7 @@
    ```
 5. **为合并结果打该版本的 tag**(带注释):
    ```sh
-   git tag -a v<版本号> -m "Know Know <版本号>"
+   git tag -a v<版本号> -m "know why <版本号>"
    ```
 6. 验证:`git log --oneline --decorate` 与 `git tag -l`,确认 tag 指向本次合并提交。
 

@@ -48,8 +48,8 @@ export function Sidebar(props: SidebarProps) {
       <div className="brand">
         <span className="brand-logo"><Icon name="leaf" /></span>
         <span>
-          know know
-          <small>让好奇心，有迹可循。</small>
+          know why
+          <small>沿着术语，继续追问。</small>
         </span>
       </div>
 

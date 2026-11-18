@@ -1,8 +1,8 @@
 {
-  "name": "know-know",
-  "version": "1.16.2",
+  "name": "know-why",
+  "version": "1.17.0",
   "private": true,
-  "description": "Know Know — 以知识探索分支组织对话的个人本机 AI 应用（1.0，无登录）",
+  "description": "know why — 在对话中沿术语分支追问，随时回到原来的思路。",
   "type": "module",
   "engines": {
     "node": ">=20"

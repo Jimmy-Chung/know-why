@@ -1,9 +1,11 @@
 .assistant-backdrop { display: none; }
-.assistant-panel { --assistant-panel-size: min(var(--assistant-width, 440px), 42%); animation: assistant-enter var(--motion-panel) var(--ease-out) both; }
-.assistant-panel.assistant-panel--closing { pointer-events: none; animation: assistant-exit var(--motion-panel) var(--ease-out) forwards; }
-/* Margin reveals the panel without transforming ancestors of fixed source previews. */
-@keyframes assistant-enter { from { margin-right: calc(-1 * var(--assistant-panel-size)); opacity: 0; } to { margin-right: 0; opacity: 1; } }
-@keyframes assistant-exit { from { margin-right: 0; opacity: 1; } to { margin-right: calc(-1 * var(--assistant-panel-size)); opacity: 0; } }
+/* Margin keeps fixed citation previews anchored to the viewport. */
+.assistant-panel {
+  --assistant-panel-size: min(var(--assistant-width, 440px), 42%);
+  transition: margin-right var(--motion-panel) var(--ease-out), opacity var(--motion-panel);
+}
+.assistant-panel--closing { margin-right: calc(-1 * var(--assistant-panel-size)); opacity: 0; pointer-events: none; }
+@starting-style { .assistant-panel { margin-right: calc(-1 * var(--assistant-panel-size)); opacity: 0; } }
 /* ---- 知识助手面板 ---- */
 .assistant-panel { position: relative; flex-shrink: 0; width: min(var(--assistant-width, 440px), 42%); min-width: 0; min-height: 0; background: var(--surface); border-left: 1px solid var(--border); z-index: var(--z-panel); padding: var(--space-5); display: flex; flex-direction: column; }
 .assistant-resize-handle { position: absolute; top: 0; left: -3px; bottom: 0; width: 6px; cursor: col-resize; z-index: 6; }
@@ -48,3 +50,36 @@
 .assistant-panel .card-composer { width: 100%; max-width: none; margin: var(--space-4) 0 0; }
 
 .assistant-empty { padding: var(--space-7) var(--space-3); color: var(--muted); font-size: var(--text-sm); line-height: var(--leading-body); }
+
+.assistant-reading-area { flex: 1; min-height: 0; position: relative; display: flex; flex-direction: column; }
+.mention-picker {
+  position: absolute; inset: auto 0 0; height: min(340px, 100%); display: flex; flex-direction: column;
+  border: 1px solid var(--border-strong); border-radius: var(--radius-lg); overflow: hidden;
+  background: var(--surface); box-shadow: var(--shadow-popover); transform-origin: bottom;
+  transition: opacity var(--motion-panel), transform var(--motion-panel) var(--ease-out);
+}
+.mention-picker[data-closing="true"] { opacity: 0; transform: translateY(6px); pointer-events: none; }
+@starting-style { .mention-picker { opacity: 0; transform: translateY(6px); } }
+.mention-heading, .mention-status { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); }
+.mention-heading { border-bottom: 1px solid var(--border); font-size: var(--text-sm); }
+.mention-heading > .ui-icon { color: var(--accent); }
+.mention-actions { display: flex; align-items: center; margin-left: auto; }
+.mention-actions button { padding: 4px 6px; font-size: var(--text-xs); color: var(--muted); border-radius: var(--radius-sm); }
+.mention-actions button:hover { background: var(--soft); color: var(--accent); }
+.mention-viewport { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; background-color: var(--surface-muted); background-image: radial-gradient(var(--border-strong) .7px, transparent .7px); background-size: 12px 12px; }
+.mention-canvas { position: relative; }
+.mention-node {
+  position: absolute; transform: translate(-50%, -50%); padding: 4px 9px; display: flex; align-items: center; gap: 3px;
+  border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface);
+  font-size: var(--text-xs); line-height: 1.5; box-shadow: var(--shadow-xs);
+  transition: background var(--motion-fast), border-color var(--motion-fast);
+}
+.mention-node span, .mention-status > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mention-node .ui-icon { width: 12px; height: 12px; }
+.mention-node[aria-selected="true"], .mention-node:hover:enabled { border-color: var(--accent); background: var(--soft); color: var(--accent); }
+.mention-node.used { opacity: 1; color: var(--accent); border-style: dashed; }
+.mention-node.compact { width: 14px; height: 14px; border-radius: 50%; padding: 0; }
+.mention-node.compact span { display: none; }
+.mention-node.compact[aria-selected="true"] { background: var(--accent); box-shadow: var(--focus-ring); }
+.mention-status { border-top: 1px solid var(--border); justify-content: space-between; font-size: var(--text-xs); color: var(--accent); }
+.mention-status small { flex-shrink: 0; }

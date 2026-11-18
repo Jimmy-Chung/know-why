@@ -73,10 +73,13 @@ export function TreePanel({ cards, currentCardId, onSelect, collapsed, reference
       if (anchorRef.current?.contains(target)) { cancelTimers(); return; }
       if (!closeTimer.current) closeTimer.current = setTimeout(close, 120);
     };
+    const outside = (event: PointerEvent) => { if (!anchorRef.current?.contains(event.target as Node)) close(); };
+    document.addEventListener("pointerdown", outside);
     const escape = (event: KeyboardEvent) => { if (event.key === "Escape") { event.preventDefault(); close(); } };
     document.addEventListener("mousemove", onMove);
     document.addEventListener("keydown", escape);
     return () => {
+      document.removeEventListener("pointerdown", outside);
       document.removeEventListener("mousemove", onMove);
       document.removeEventListener("keydown", escape);
     };
@@ -86,6 +89,7 @@ export function TreePanel({ cards, currentCardId, onSelect, collapsed, reference
     <aside ref={anchorRef}
       style={{ "--tree-frame-width": `${frame.width}px`, "--tree-frame-height": `${frame.height}px` } as React.CSSProperties}
       className={`tree-panel${collapsed ? " tree-panel--collapsed" : ""}${expanded ? " tree-panel--expanded" : ""}`}
+      aria-hidden={collapsed || undefined} {...{ inert: collapsed ? "" : undefined }}
       aria-label="探索路径导航" aria-expanded={expanded} tabIndex={0}
       onMouseEnter={enter} onMouseLeave={leave}
       onKeyDown={(event) => {

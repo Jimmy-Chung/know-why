@@ -1,6 +1,6 @@
 # 备份与恢复
 
-Know Know 的所有正式数据保存在本机 SQLite 数据库（`know-know.sqlite`，WAL 模式）。备份与恢复走本地服务 API，密钥永不导出。
+know why 的所有正式数据保存在本机 SQLite 数据库（`know-know.sqlite`，WAL 模式）。备份与恢复走本地服务 API，密钥永不导出。
 
 ## 数据目录
 

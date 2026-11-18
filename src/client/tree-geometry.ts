@@ -1,5 +1,8 @@
 import type { Card } from "../shared/types.js";
 
+export const TREE_COLUMN = 56;
+export const TREE_LEVEL = 64;
+
 export function buildTreeGeometry(cards: Card[]) {
   const children = new Map<string, Card[]>();
   for (const card of cards) {
@@ -16,12 +19,15 @@ export function buildTreeGeometry(cards: Card[]) {
     seen.add(card.id);
     const xs: number[] = [];
     for (const child of children.get(card.id) ?? []) if (!seen.has(child.id)) xs.push(walk(child, depth + 1));
-    const x = xs.length ? (xs[0]! + xs[xs.length - 1]!) / 2 : leaf++ * 56;
-    nodes.push({ card, x, y: depth * 64, depth });
+    const x = xs.length ? (xs[0]! + xs[xs.length - 1]!) / 2 : leaf++ * TREE_COLUMN;
+    nodes.push({ card, x, y: depth * TREE_LEVEL, depth });
     return x;
   };
-  const root = cards.find(card => !card.parent_card_id);
-  if (root) walk(root, 0);
+  for (const card of cards) if (!card.parent_card_id) walk(card, 0);
+  // Retain disconnected cards from older or partially restored sessions.
+  const ids = new Set(cards.map(card => card.id));
+  for (const card of cards) if (card.parent_card_id && !ids.has(card.parent_card_id)) walk(card, 0);
+  for (const card of cards) if (!seen.has(card.id)) walk(card, 0);
   return { nodes: nodes.sort((a, b) => a.depth - b.depth || a.x - b.x), width: Math.max(0, ...nodes.map(node => node.x)), height: Math.max(0, ...nodes.map(node => node.y)) };
 }
 
