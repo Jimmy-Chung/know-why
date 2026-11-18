@@ -185,9 +185,6 @@ function CardFace(props: {
   const { card, messages, draft, anchors, termLinks, conv, onSendMessage, onCreateAnchor, onExplore, onExploreTerm, onCleanStaleTermLinks, onStop, onRetry, onSaveDraft, activeRuns, onSelectCard, runStatuses } = props;
   const [input, setInput] = useState(draft?.text || "");
   const [pendingQuote, setPendingQuote] = useState<SelectionAnchor | null>(null);
-  const [attachments, setAttachments] = useState<Attachment[]>([]);
-  const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesRef = useRef<HTMLDivElement>(null);
   const messageContentRef = useRef<HTMLDivElement>(null);
   const followBottomRef = useRef(props.savedScrollTop == null);
@@ -212,7 +209,6 @@ function CardFace(props: {
   // 同步草稿
   useEffect(() => {
     setInput(draft?.text || "");
-    setAttachments([]);
     if (draft?.pending_quote_anchor_id) {
       // 从 anchors 找
       const a = anchors.find((x) => x.id === draft.pending_quote_anchor_id);
@@ -334,40 +330,14 @@ function CardFace(props: {
     window.getSelection()?.removeAllRanges();
   }, [selection, onCreateAnchor, onExplore]);
 
-  const handlePickFile = useCallback(() => {
-    fileInputRef.current?.click();
-  }, []);
-
-  const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || !files.length) return;
-    setUploading(true);
-    try {
-      for (const f of Array.from(files)) {
-        const att = await api.uploadAttachment(conv.id, f);
-        setAttachments((prev) => [...prev, { id: att.id, name: att.name, mime: att.mime, size: att.size }]);
-      }
-    } catch (err) {
-      console.error("附件上传失败", err);
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
-  }, [conv.id]);
-
-  const handleRemoveAttachment = useCallback((id: string) => {
-    setAttachments((prev) => prev.filter((a) => a.id !== id));
-  }, []);
-
   const handleSend = useCallback(() => {
-    if (props.settingsPending || (!input.trim() && !pendingQuote && attachments.length === 0)) return;
+    if (props.settingsPending || (!input.trim() && !pendingQuote)) return;
     scrollToBottom();
-    onSendMessage(card.id, input, pendingQuote?.id || null, attachments);
+    onSendMessage(card.id, input, pendingQuote?.id || null);
     setInput("");
     setPendingQuote(null);
-    setAttachments([]);
     onSaveDraft(card.id, "", null);
-  }, [input, pendingQuote, attachments, card.id, onSendMessage, onSaveDraft, props.settingsPending, scrollToBottom]);
+  }, [input, pendingQuote, card.id, onSendMessage, onSaveDraft, props.settingsPending, scrollToBottom]);
 
   const handleRemoveQuote = useCallback(() => {
     setPendingQuote(null);
@@ -435,16 +405,6 @@ function CardFace(props: {
             <IconButton onClick={handleRemoveQuote} icon="close" label="移除引用" className="composer-quote-remove" />
           </div>
         )}
-        {attachments.length > 0 && (
-          <div className="composer-attachments">
-            {attachments.map((a) => (
-              <div className="composer-attachment-chip" key={a.id} title={a.name}>
-                <span className="chip-name"><Icon name="attachment" /> {a.name}</span>
-                <IconButton onClick={() => handleRemoveAttachment(a.id)} icon="close" label="移除附件" />
-              </div>
-            ))}
-          </div>
-        )}
         <textarea
           placeholder="追问或探索……"
           title="Enter 发送 · Shift+Enter 换行"
@@ -457,19 +417,11 @@ function CardFace(props: {
             }
           }}
         />
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          hidden
-          onChange={handleFileChange}
-        />
         <div className="composer-bottom">
           <div className="composer-left">
-            <Button variant="ghost" className="attach-btn" onClick={handlePickFile} disabled={uploading} icon="attachment" title="上传附件">{uploading ? "上传中…" : "附件"}</Button>
             {props.composerControls}
           </div>
-          <Tooltip content="发送"><Button variant="primary" className="send-btn" icon="arrowUp" aria-label="发送" onClick={handleSend} disabled={props.settingsPending || (!input.trim() && !pendingQuote && attachments.length === 0)} /></Tooltip>
+          <Tooltip content="发送"><Button variant="primary" className="send-btn" icon="arrowUp" aria-label="发送" onClick={handleSend} disabled={props.settingsPending || (!input.trim() && !pendingQuote)} /></Tooltip>
         </div>
         {props.settingsNote && <div className="composer-settings-note" role="status">{props.settingsNote}</div>}
       </div>
@@ -741,7 +693,6 @@ function MessageView({ message, anchors, allAnchors, termLinks, currentCardId, o
         >
           {message.quote_anchor_id && <QuoteBlock anchorId={message.quote_anchor_id} anchors={allAnchors} />}
           {message.content}
-          {message.attachments && message.attachments.length > 0 && <AttachmentList attachments={message.attachments} />}
         </div>
         <div className="msg-actions">
           <CopyButton text={message.content} iconOnly />
@@ -895,20 +846,6 @@ function CitePopover({ source, rect, onEnter, onLeave, onClose }: { source: Sour
   );
 }
 
-
-// 附件列表：展示文件名与下载链接
-function AttachmentList({ attachments }: { attachments: Attachment[] }) {
-  return (
-    <div className="msg-attachments">
-      {attachments.map((a) => (
-        <a className="msg-attachment" key={a.id} href={`/api/attachments/${a.id}`} target="_blank" rel="noreferrer" title={a.name}>
-          <Icon name="attachment" />
-          <span className="msg-attachment-name">{a.name}</span>
-        </a>
-      ))}
-    </div>
-  );
-}
 
 function QuoteBlock({ anchorId, anchors }: { anchorId: string; anchors: SelectionAnchor[] }) {
   const a = anchors.find((x) => x.id === anchorId);
