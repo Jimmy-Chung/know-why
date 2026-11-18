@@ -1,3 +1,4 @@
+import { usePanelPresence } from "../../usePanelPresence.js";
 import React, { useState } from "react";
 import {
   useFloating,
@@ -37,7 +38,8 @@ export function Tooltip({
   disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const { refs, floatingStyles, context } = useFloating({
+  const present = usePanelPresence(open);
+  const { refs, floatingStyles, context, elements } = useFloating({
     open,
     onOpenChange: setOpen,
     placement,
@@ -57,18 +59,16 @@ export function Tooltip({
   return (
     <>
       {React.cloneElement(children, referenceProps as Record<string, unknown>)}
-      <FloatingPortal>
-        {open && (
+      {present && <FloatingPortal root={elements.reference instanceof Element ? elements.reference.closest("dialog") ?? undefined : undefined}>
           <div
-            className="kk-tooltip"
+            className="kk-tooltip" data-closing={!open}
             ref={refs.setFloating}
             style={floatingStyles}
             {...getFloatingProps()}
           >
             {content}
           </div>
-        )}
-      </FloatingPortal>
+      </FloatingPortal>}
     </>
   );
 }

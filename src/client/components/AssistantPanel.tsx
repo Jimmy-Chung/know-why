@@ -6,7 +6,9 @@ import { CopyButton } from "./ui/CopyButton.js";
 import React, { useState, useRef, useEffect, useMemo, useLayoutEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { renderMarkdown, markdownToPlainText } from "../markdown.js";
-import { stripMentionTrigger } from "../mention.js";
+import { MentionGraph } from "./MentionGraph.js";
+import { useExitValue } from "../usePanelPresence.js";
+import { mentionAtCaret, stripMentionTrigger } from "../mention.js";
 import type { Conversation, ProviderConfig, KnowledgeAssistantMessage, Card, Message, SSEEvent } from "../../shared/types.js";
 import { api } from "../api.js";
 
@@ -50,11 +52,14 @@ export function AssistantPanel({ conv, provider, messages, cards, allMessages, c
   const draggingRef = useRef(false);
   // 选中助手回答片段 → 引用到提问：选区定位 + 待发送引用
   const [selection, setSelection] = useState<{ messageId: string; text: string; rect: DOMRect } | null>(null);
+  const visibleSelection = useExitValue(selection);
   const [pendingQuote, setPendingQuote] = useState<string | null>(null);
   // @ 作用域：用户可选若干卡片，本次提问的检索只在这些卡范围内进行
   const [scopeCardIds, setScopeCardIds] = useState<string[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [picker, setPicker] = useState<{ query: string; idx: number; rect: DOMRect; start: number; end: number } | null>(null);
+  const [picker, setPicker] = useState<{ query: string; idx: number; start: number; end: number } | null>(null);
+
+  const shownPicker = useExitValue(picker);
 
   // 拖拽左边缘调整宽度
   const startResize = (e: React.MouseEvent) => {
@@ -165,19 +170,24 @@ export function AssistantPanel({ conv, provider, messages, cards, allMessages, c
   }, [currentMsgs, loading]);
 
   const handleNewThread = () => {
+    setShowHistory(false);
     onSetCurrentThreadId(crypto.randomUUID());
   };
 
   // @ picker 点击外部关闭（mousedown 在 textarea 与 picker 之外才关）
   useEffect(() => {
     if (!picker) return;
-    const onDown = (e: MouseEvent) => {
+    const onDown = (e: Event) => {
       const t = e.target as HTMLElement;
       if (t.closest(".mention-picker") || t === textareaRef.current) return;
       setPicker(null);
     };
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("focusin", onDown);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("focusin", onDown);
+    };
   }, [picker]);
 
   // 选区处理：在助手回答内选取文本 → 引用。仅 assistant 消息可引用
@@ -223,31 +233,22 @@ export function AssistantPanel({ conv, provider, messages, cards, allMessages, c
 
   // @ 选择器候选：本会话所有卡片，过滤已选，按 title 模糊匹配
   const pickerCards = useMemo(() => {
-    if (!picker) return [];
-    const q = picker.query.toLowerCase();
+    const q = shownPicker?.query.toLowerCase() ?? "";
     return cards
       .filter((c) => !scopeCardIds.includes(c.id))
-      .filter((c) => !q || (c.title || "主卡片").toLowerCase().includes(q))
-      .slice(0, 8);
-  }, [picker, cards, scopeCardIds]);
+      .filter((c) => !q || (c.title || "主卡片").toLowerCase().includes(q));
+  }, [shownPicker?.query, cards, scopeCardIds]);
 
   const addScopeCard = useCallback((cardId: string) => {
-    setScopeCardIds((prev) => (prev.includes(cardId) ? prev : [...prev, cardId]));
-    // 选中候选后把输入框里的 "@查询词" 摘掉，只保留已选卡片 chip
-    if (picker) {
-      const { text, caret } = stripMentionTrigger(input, picker.start, picker.end);
-      setInput(text);
-      setPicker(null);
-      requestAnimationFrame(() => {
-        const ta = textareaRef.current;
-        if (ta) { ta.focus(); ta.setSelectionRange(caret, caret); }
-      });
-      return;
-    }
+    if (!picker) return;
+    setScopeCardIds(prev => prev.includes(cardId) ? prev : [...prev, cardId]);
+    const { text, caret } = stripMentionTrigger(input, picker.start, picker.end);
+    setInput(text);
     setPicker(null);
     requestAnimationFrame(() => {
       const ta = textareaRef.current;
-      if (ta) { ta.focus(); const end = ta.value.length; ta.setSelectionRange(end, end); }
+      ta?.focus();
+      ta?.setSelectionRange(caret, caret);
     });
   }, [picker, input]);
 
@@ -259,35 +260,20 @@ export function AssistantPanel({ conv, provider, messages, cards, allMessages, c
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const v = e.target.value;
     setInput(v);
-    const ta = e.target;
-    const pos = ta.selectionStart;
-    // 找光标前最近的 @，且它与光标之间无空白
-    const before = v.slice(0, pos);
-    const atIdx = before.lastIndexOf("@");
-    if (atIdx >= 0) {
-      const segment = before.slice(atIdx + 1);
-      const prevChar = atIdx > 0 ? before[atIdx - 1] ?? "" : "";
-      const atBoundary = atIdx === 0 || /\s/.test(prevChar);
-      // 输入了 @ 且其后到光标无空白 → 打开 picker；否则关闭
-      if (atBoundary && !/\s/.test(segment) && segment.length <= 40) {
-        const rect = ta.getBoundingClientRect();
-        setPicker({ query: segment, idx: 0, rect, start: atIdx, end: pos });
-        return;
-      }
-    }
-    setPicker(null);
+    const trigger = mentionAtCaret(v, e.target.selectionStart);
+    setPicker(trigger && { ...trigger, idx: 0 });
   }, []);
 
   const handlePickerKey = useCallback((e: React.KeyboardEvent) => {
-    if (!picker) return;
-    if (e.key === "ArrowDown") { e.preventDefault(); setPicker((p) => p ? { ...p, idx: Math.min(pickerCards.length - 1, p.idx + 1) } : p); }
+    if (!picker || e.nativeEvent.isComposing) return;
+    if (e.key === "ArrowDown") { e.preventDefault(); setPicker((p) => p ? { ...p, idx: Math.max(0, Math.min(pickerCards.length - 1, p.idx + 1)) } : p); }
     else if (e.key === "ArrowUp") { e.preventDefault(); setPicker((p) => p ? { ...p, idx: Math.max(0, p.idx - 1) } : p); }
     else if (e.key === "Enter") { e.preventDefault(); const c = pickerCards[picker.idx]; if (c) addScopeCard(c.id); }
     else if (e.key === "Escape") { e.preventDefault(); setPicker(null); }
   }, [picker, pickerCards, addScopeCard]);
 
   // Backspace 在输入框空且无 picker 时，删除最后一个 scope chip
-  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (picker) { handlePickerKey(e); return; }
     if (e.key === "Backspace" && input === "" && scopeCardIds.length > 0) {
       e.preventDefault();
@@ -298,7 +284,7 @@ export function AssistantPanel({ conv, provider, messages, cards, allMessages, c
       e.preventDefault();
       handleSend();
     }
-  }, [picker, input, scopeCardIds.length, handlePickerKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  };
 
   const handleSend = async () => {
     if (!input.trim() || loading) return;
@@ -376,13 +362,19 @@ export function AssistantPanel({ conv, provider, messages, cards, allMessages, c
         )
       ) : (
         <>
-          <div className="assistant-body" ref={bodyRef} onMouseUp={handleSelection} onKeyUp={handleSelection}>
-            {currentMsgs.length === 0 && <p className="assistant-empty">{currentThreadId ? "新建问答线程，输入你的问题。" : "试试问「我们刚才探索过哪些概念？」，或用 @ 选中卡片让助手比较差异。"}</p>}
-            {currentMsgs.map((m) => (
-              <AssistantMessageView key={m.id} message={m} cards={cards} allMessages={allMessages} onGoToMessage={onGoToMessage} onNewNote={onNewNote} />
-            ))}
-            {sendError && <div role="alert" className="status-row">{sendError}{reconnect && <button onClick={()=>connectRun(reconnect.id,reconnect.threadId)}>重新连接</button>}</div>}
-            {loading && sendingThread === currentThreadId && <div className="status-row"><span>{statusText}</span><button className="stop" onClick={handleStop} title="中断生成">停止</button></div>}
+          <div className="assistant-reading-area">
+            <div className="assistant-body" ref={bodyRef} onMouseUp={handleSelection} onKeyUp={handleSelection}>
+              {currentMsgs.length === 0 && <p className="assistant-empty">{currentThreadId ? "新建问答线程，输入你的问题。" : "试试问「我们刚才探索过哪些概念？」，或用 @ 选中卡片让助手比较差异。"}</p>}
+              {currentMsgs.map((m) => (
+                <AssistantMessageView key={m.id} message={m} cards={cards} allMessages={allMessages} onGoToMessage={onGoToMessage} onNewNote={onNewNote} />
+              ))}
+              {sendError && <div role="alert" className="status-row">{sendError}{reconnect && <button onClick={()=>connectRun(reconnect.id,reconnect.threadId)}>重新连接</button>}</div>}
+              {loading && sendingThread === currentThreadId && <div className="status-row"><span>{statusText}</span><button className="stop" onClick={handleStop} title="中断生成">停止</button></div>}
+            </div>
+            {shownPicker && <MentionGraph cards={cards} selected={scopeCardIds} query={shownPicker.query}
+              matches={pickerCards} activeIndex={shownPicker.idx} closing={!picker || closing}
+              onHighlight={idx => setPicker(p => p && p.idx !== idx ? { ...p, idx } : p)}
+              onClose={() => { setPicker(null); textareaRef.current?.focus(); }} onSelect={addScopeCard} />}
           </div>
           <div className="card-composer">
             {pendingQuote && (
@@ -406,7 +398,14 @@ export function AssistantPanel({ conv, provider, messages, cards, allMessages, c
             )}
             <textarea
               ref={textareaRef}
-              placeholder="询问当前会话的内容……（输入 @ 限定到某张卡片）"
+              aria-label="向会话助手提问" aria-autocomplete="list"
+              aria-controls={picker ? "mention-options" : undefined}
+              aria-activedescendant={picker && pickerCards[picker.idx] ? `mention-${pickerCards[picker.idx]!.id}` : undefined}
+              onSelect={event => {
+                const ta = event.currentTarget;
+                if (picker && (ta.selectionEnd !== picker.end || ta.selectionStart !== ta.selectionEnd)) setPicker(null);
+              }}
+              placeholder="询问当前会话的内容……（输入 @ 从节点图中选卡片）"
               value={input}
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
@@ -416,55 +415,15 @@ export function AssistantPanel({ conv, provider, messages, cards, allMessages, c
               <Tooltip content="提问"><Button variant="primary" className="send-btn" icon="arrowUp" aria-label="提问" onClick={handleSend} disabled={!input.trim() || loading} /></Tooltip>
             </div>
           </div>
-          {picker && pickerCards.length > 0 && (() => {
-            // 智能定位：textarea 在面板底部 composer 区，向下空间常不足；
-            // 下方放不下时改向上展开，并限高滚动，避免 picker 超出视口被裁剪。
-            const PICKER_MAX = 260; const gap = 4;
-            const below = window.innerHeight - picker.rect.bottom - gap;
-            const above = picker.rect.top - gap;
-            const placeAbove = below < 180 && above > below;
-            const maxH = Math.min(placeAbove ? above : below, PICKER_MAX);
-            const left = Math.max(8, Math.min(picker.rect.left, window.innerWidth - 240));
-            return createPortal(
-              <div
-                className="mention-picker"
-                style={{
-                  position: "fixed",
-                  // 向上展开时用 bottom 贴住输入框：单条候选也能紧贴，
-                  // 而不是按 maxH 预留高度、把列表顶到很远的上方。
-                  ...(placeAbove
-                    ? { bottom: window.innerHeight - picker.rect.top + gap }
-                    : { top: picker.rect.bottom + gap }),
-                  left,
-                  maxHeight: maxH,
-                  overflowY: "auto",
-                  zIndex: 1000,
-                }}
-              >
-                {pickerCards.map((c, i) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    className={"mention-item" + (i === picker.idx ? " active" : "")}
-                    onMouseEnter={() => setPicker((p) => p ? { ...p, idx: i } : p)}
-                    onClick={() => addScopeCard(c.id)}
-                  >
-                    <Icon name="cards" /><span>{c.title || "主卡片"}</span>
-                  </button>
-                ))}
-              </div>,
-              document.body,
-            );
-          })()}
         </>
       )}
-      {selection && createPortal(
+      {visibleSelection && createPortal(
         <div
-          className="selection-bar"
+          className="selection-bar" data-closing={!selection} {...{ inert: !selection ? "" : undefined }}
           style={{
             position: "fixed",
-            top: Math.max(10, selection.rect.top - 45),
-            left: Math.max(8, Math.min(selection.rect.left, window.innerWidth - 100)),
+            top: Math.max(10, visibleSelection.rect.top - 45),
+            left: Math.max(8, Math.min(visibleSelection.rect.left, window.innerWidth - 100)),
           }}
         >
           <IconButton onClick={handleQuote} icon="quote" label="引用到提问" />
@@ -550,6 +509,7 @@ function EvidenceBadge({ messageId, content, evidence, cards, allMessages, onGoT
   contentRef: React.RefObject<HTMLDivElement>;
 }) {
   const [activeCite, setActiveCite] = useState<{ idx: number; rect: DOMRect } | null>(null);
+  const visibleCite = useExitValue(activeCite);
   const hoverTimer = useRef<number | null>(null);
   const clearTimer = () => { if (hoverTimer.current) { window.clearTimeout(hoverTimer.current); hoverTimer.current = null; } };
   const scheduleClose = () => { clearTimer(); hoverTimer.current = window.setTimeout(() => setActiveCite(null), 220); };
@@ -606,19 +566,19 @@ function EvidenceBadge({ messageId, content, evidence, cards, allMessages, onGoT
     }
   }, [content, evidence, cards, onGoToMessage]);
 
-  const activeEv = activeCite != null ? evidence[activeCite.idx - 1] : null;
+  const activeEv = visibleCite != null ? evidence[visibleCite.idx - 1] : null;
   const activeCard = activeEv ? cards.find((c) => c.id === activeEv.card_id) : null;
   const activeMsg = activeEv ? allMessages[activeEv.card_id]?.find((m) => m.id === activeEv.message_id) : undefined;
 
   return (
     <div className="assistant-msg-answer">
       <div className="msg-answer" ref={contentRef} data-message-id={messageId} dangerouslySetInnerHTML={{ __html: html }} />
-      {activeEv && activeCite && activeCard && (
+      {activeEv && visibleCite && activeCard && (
         <EvidencePopover
           card={activeCard}
           msg={activeMsg}
           excerpts={activeEv.excerpts?.map(e=>e.text)}
-          rect={activeCite.rect}
+          closing={!activeCite} rect={visibleCite.rect}
           onEnter={clearTimer}
           onLeave={scheduleClose}
           onClose={() => { clearTimer(); setActiveCite(null); }}
@@ -631,7 +591,8 @@ function EvidenceBadge({ messageId, content, evidence, cards, allMessages, onGoT
 // 证据浮窗仅预览来源；移出时收起，点击正文徽章仍可跳转卡片。
 // 不用 portal：.assistant-panel 无 transform/filter 祖先，position:fixed 直接相对视口；
 // 且 portal 挂在 document.body 时 React 合成事件（mouseenter/mouseleave/click）不触发
-function EvidencePopover({ card, msg, excerpts, rect, onEnter, onLeave, onClose }: {
+function EvidencePopover({ closing, card, msg, excerpts, rect, onEnter, onLeave, onClose }: {
+  closing: boolean;
   card: Card;
   msg?: Message;
   excerpts?: string[];
@@ -661,7 +622,7 @@ function EvidencePopover({ card, msg, excerpts, rect, onEnter, onLeave, onClose 
     style.bottom = vh - rect.top + 4;
   }
   return (
-    <div className="cite-popover" style={style} onMouseEnter={onEnter} onMouseLeave={onLeave}>
+    <div className="cite-popover" data-closing={closing} style={style} onMouseEnter={onEnter} onMouseLeave={onLeave}>
       <div className="cite-popover-head">
         <Icon name="cards" />
         <div className="cite-popover-title">{card.title || "主卡片"}</div>

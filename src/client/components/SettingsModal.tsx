@@ -4,13 +4,17 @@ import type { ProviderConfig } from "../../shared/types.js";
 import { api } from "../api.js";
 import { ProviderDialog } from "./ProviderDialog.js";
 
+import { useExitValue } from "../usePanelPresence.js";
+import { DialogSurface } from "./ui/DialogSurface.js";
+
 interface SettingsModalProps {
+  closing: boolean;
   providers: ProviderConfig[];
   onClose: () => void;
   onSaved: () => Promise<void>;
 }
 
-export function SettingsModal({ providers, onClose, onSaved }: SettingsModalProps) {
+export function SettingsModal({ closing, providers, onClose, onSaved }: SettingsModalProps) {
   const [note, setNote] = useState<{ text: string; kind: "ok" | "err" | "" }>({ text: "", kind: "" });
   // null = 关闭；{ id: null } = 新增；{ id } = 编辑
   const [dialog, setDialog] = useState<{ id: string | null } | null>(null);
@@ -37,49 +41,52 @@ export function SettingsModal({ providers, onClose, onSaved }: SettingsModalProp
     }
   };
 
-  const editingProvider = dialog?.id ? providers.find((p) => p.id === dialog.id) ?? null : null;
+  const shownDialog = useExitValue(dialog);
+  const editingProvider = shownDialog?.id ? providers.find((p) => p.id === shownDialog.id) ?? null : null;
 
   return (
-    <div className="modal" onClick={onClose}>
-      <div className="settings" onClick={(e) => e.stopPropagation()}>
-        <div className="settings-header">
-          <h2>设置</h2>
-          <IconButton onClick={onClose} icon="close" label="关闭设置" />
-        </div>
-        <p>配置模型服务。API Key 由本地服务安全保存，不进入日志。</p>
-
-        <div className="settings-section-title">已配置</div>
-        {providers.length === 0 && <p className="settings-description">尚未配置 Provider，点下方按钮添加。</p>}
-        {providers.map((p) => (
-          <div className="provider-item" key={p.id}>
-            <span className="provider-mark">{p.name.charAt(0)}</span>
-            <span className="name">
-              {p.name}
-              <br />
-              <small>{typeLabel(p.type)} · {p.default_model || "未设模型"} · {p.has_secret ? "已配置Key" : "未配置Key"}</small>
-            </span>
-            {p.is_default && <span className="tag">默认</span>}
-            <div className="actions">
-              <button onClick={() => setDialog({ id: p.id })}>编辑</button>
-              <button onClick={() => setDefault(p.id)}>设为默认</button>
-              <button className="danger" onClick={() => removeProvider(p)}>删除</button>
-            </div>
+    <>
+      <DialogSurface label="设置" closing={closing} onClose={onClose}>
+        <div className="settings" onClick={(e) => e.stopPropagation()}>
+          <div className="settings-header">
+            <h2>设置</h2>
+            <IconButton onClick={onClose} icon="close" label="关闭设置" />
           </div>
-        ))}
+          <p>配置模型服务。API Key 由本地服务安全保存，不进入日志。</p>
 
-        <button className="provider-add" onClick={() => setDialog({ id: null })}>＋ 添加 Provider</button>
-        <div className={`settings-note ${note.kind}`}>{note.text}</div>
-      </div>
+          <div className="settings-section-title">已配置</div>
+          {providers.length === 0 && <p className="settings-description">尚未配置 Provider，点下方按钮添加。</p>}
+          {providers.map((p) => (
+            <div className="provider-item" key={p.id}>
+              <span className="provider-mark">{p.name.charAt(0)}</span>
+              <span className="name">
+                {p.name}
+                <br />
+                <small>{typeLabel(p.type)} · {p.default_model || "未设模型"} · {p.has_secret ? "已配置Key" : "未配置Key"}</small>
+              </span>
+              {p.is_default && <span className="tag">默认</span>}
+              <div className="actions">
+                <button onClick={() => setDialog({ id: p.id })}>编辑</button>
+                <button onClick={() => setDefault(p.id)}>设为默认</button>
+                <button className="danger" onClick={() => removeProvider(p)}>删除</button>
+              </div>
+            </div>
+          ))}
 
-      {dialog && (
+          <button className="provider-add" onClick={() => setDialog({ id: null })}>＋ 添加 Provider</button>
+          <div className={`settings-note ${note.kind}`}>{note.text}</div>
+        </div>
+      </DialogSurface>
+      {shownDialog && (
         <ProviderDialog
-          key={dialog.id ?? "new"}
+          key={shownDialog.id ?? "new"}
+          closing={!dialog}
           provider={editingProvider}
           onClose={() => setDialog(null)}
           onSaved={onSaved}
         />
       )}
-    </div>
+    </>
   );
 }
 

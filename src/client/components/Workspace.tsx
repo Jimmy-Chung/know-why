@@ -20,7 +20,8 @@ import { CardPile } from "./CardPile.js";
 import { TreePanel } from "./TreePanel.js";
 import { isCrossBranchReference, REFERENCE_TRACE_MS, type SelectCard, type TreeReference } from "../tree-reference.js";
 import { AssistantPanel } from "./AssistantPanel.js";
-import { usePanelPresence } from "../usePanelPresence.js";
+import { DialogSurface } from "./ui/DialogSurface.js";
+import { useExitValue, usePanelPresence } from "../usePanelPresence.js";
 import { NoteEditorDialog, NoteListGrid, type NoteEditorTarget } from "./Notes.js";
 import { NOTES_ENABLED } from "../../shared/features.js";
 
@@ -69,6 +70,7 @@ interface WorkspaceProps {
 }
 
 export function Workspace(props: WorkspaceProps) {
+  const previewId = useExitValue(props.previewCardId);
   const assistantPresent = usePanelPresence(props.assistantOpen);
   const {
     conv,
@@ -208,7 +210,7 @@ export function Workspace(props: WorkspaceProps) {
   );
 
   return (
-    <div className={`workspace${assistantPresent ? " workspace--assistant" : ""}`}>
+    <div className={`workspace${props.assistantOpen ? " workspace--assistant" : ""}`}>
       <div className="ws-main">
         <div className="header">
           <div className="title-group">
@@ -308,7 +310,7 @@ export function Workspace(props: WorkspaceProps) {
                 )}
               </div>
             </div>
-            <TreePanel key={conv.id} cards={cards} currentCardId={card?.id || null} onSelect={onSelectCard} collapsed={assistantPresent} reference={reference} />
+            <TreePanel key={conv.id} cards={cards} currentCardId={card?.id || null} onSelect={onSelectCard} collapsed={props.assistantOpen} reference={reference} />
           </div>
           {NOTES_ENABLED && (
             <div className="notes-pane" hidden={props.activeTab !== "notes"}>
@@ -323,7 +325,7 @@ export function Workspace(props: WorkspaceProps) {
           )}
         </div>
       </div>
-      {props.assistantOpen && <div className="assistant-backdrop" onClick={props.onToggleAssistant} />}
+      {assistantPresent && <div className="assistant-backdrop" data-closing={!props.assistantOpen} onClick={props.onToggleAssistant} />}
       {assistantPresent && (
         <AssistantPanel
           closing={!props.assistantOpen}
@@ -343,9 +345,10 @@ export function Workspace(props: WorkspaceProps) {
           onGoToMessage={(cardId, messageId) => { props.onGoToMessage(cardId, messageId); }}
         />
       )}
-      {props.previewCardId && (
+      {previewId && (
         <CardPreviewDialog
-          cardId={props.previewCardId}
+          cardId={previewId}
+          closing={!props.previewCardId}
           cards={cards}
           messages={messages}
           onClose={() => props.onPreviewCard(null)}
@@ -372,7 +375,8 @@ async function loadConversationById(id: string) {
 }
 
 // 卡片预览弹窗：从助手来源点击卡片时弹出，避免在卡片集群内直接打开造成遮挡
-function CardPreviewDialog({ cardId, cards, messages, onClose, onGoToCard }: {
+function CardPreviewDialog({ closing, cardId, cards, messages, onClose, onGoToCard }: {
+  closing: boolean;
   cardId: string;
   cards: Card[];
   messages: Record<string, Message[]>;
@@ -383,7 +387,7 @@ function CardPreviewDialog({ cardId, cards, messages, onClose, onGoToCard }: {
   if (!card) return null;
   const msgs = messages[cardId] || [];
   return (
-    <div className="card-preview-overlay" onClick={onClose}>
+    <DialogSurface className="card-preview-overlay" label={card.title || "卡片预览"} closing={closing} onClose={onClose}>
       <div className="card-preview-dialog" onClick={(e) => e.stopPropagation()}>
         <div className="card-preview-top">
           <span>{card.title || "主卡片"}</span>
@@ -410,6 +414,6 @@ function CardPreviewDialog({ cardId, cards, messages, onClose, onGoToCard }: {
           )}
         </div>
       </div>
-    </div>
+    </DialogSurface>
   );
 }

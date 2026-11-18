@@ -1,3 +1,4 @@
+import { useExitValue } from "../usePanelPresence.js";
 import { Icon } from "./ui/Icon.js";
 import { Button, IconButton } from "./ui/Button.js";
 import { Tooltip } from "./ui/Tooltip.js";
@@ -52,10 +53,8 @@ export function CardPile(props: CardPileProps) {
   useEffect(() => {
     if (prevCardRef.current.id !== currentCard.id) {
       const oldCard = prevCardRef.current;
-      setExiting({ card: oldCard, msgs: allMessages[oldCard.id] || [] });
+      setExiting(window.matchMedia("(prefers-reduced-motion: reduce)").matches ? null : { card: oldCard, msgs: allMessages[oldCard.id] || [] });
       prevCardRef.current = currentCard;
-      const t = setTimeout(() => setExiting(null), 560);
-      return () => clearTimeout(t);
     }
     prevCardRef.current = currentCard;
   }, [currentCard.id, allMessages]);
@@ -99,7 +98,8 @@ export function CardPile(props: CardPileProps) {
         );
       })}
       {exiting && (
-        <div className="card-exit" aria-hidden="true" style={{ zIndex: 9 }}>
+        <div key={exiting.card.id} className="card-exit" aria-hidden="true" style={{ zIndex: 9 }}
+          onAnimationEnd={event => { if (event.target === event.currentTarget) setExiting(null); }}>
           <div className="card-top">
             <span>{exiting.card.title || "主卡片"}</span>
             <span>{exiting.card.parent_card_id ? "探索分支" : "主卡片"}</span>
@@ -205,6 +205,7 @@ function CardFace(props: {
     updateScrollState();
   }, [updateScrollState]);
   const [selection, setSelection] = useState<{ messageId: string; text: string; start: number; end: number; rect: DOMRect } | null>(null);
+  const visibleSelection = useExitValue(selection);
 
   // 同步草稿
   useEffect(() => {
@@ -425,13 +426,13 @@ function CardFace(props: {
         </div>
         {props.settingsNote && <div className="composer-settings-note" role="status">{props.settingsNote}</div>}
       </div>
-      {selection && createPortal(
+      {visibleSelection && createPortal(
         <div
-          className="selection-bar"
+          className="selection-bar" data-closing={!selection} {...{ inert: !selection ? "" : undefined }}
           style={{
             position: "fixed",
-            top: Math.max(10, selection.rect.top - 45),
-            left: Math.max(8, Math.min(selection.rect.left, window.innerWidth - 100)),
+            top: Math.max(10, visibleSelection.rect.top - 45),
+            left: Math.max(8, Math.min(visibleSelection.rect.left, window.innerWidth - 100)),
           }}
         >
           <IconButton onClick={handleQuote} icon="quote" label="引用到当前卡片" />
@@ -574,6 +575,7 @@ function MessageView({ message, anchors, allAnchors, termLinks, currentCardId, o
   // streaming 期间不处理（content 持续变化）；sources 为空也不处理
   const sourceList = message.sources ?? [];
   const [activeCite, setActiveCite] = useState<{ idx: number; rect: DOMRect } | null>(null);
+  const visibleCite = useExitValue(activeCite);
   const hoverTimer = useRef<number | null>(null);
   const clearHoverTimer = () => { if (hoverTimer.current) { window.clearTimeout(hoverTimer.current); hoverTimer.current = null; } };
   const scheduleClose = () => { clearHoverTimer(); hoverTimer.current = window.setTimeout(() => setActiveCite(null), 220); };
@@ -680,7 +682,7 @@ function MessageView({ message, anchors, allAnchors, termLinks, currentCardId, o
     }
   }, [onSelectCard, onExploreTerm, onCleanStaleTermLinks, currentCardId, termLinks, pendingTerm]);
 
-  const activeSource = activeCite != null ? sourceList[activeCite.idx - 1] : null;
+  const activeSource = visibleCite != null ? sourceList[visibleCite.idx - 1] : null;
 
   if (message.role === "user") {
     return (
@@ -751,8 +753,8 @@ function MessageView({ message, anchors, allAnchors, termLinks, currentCardId, o
           <KnowledgeToggle message={message} />
         </div>
       )}
-      {activeSource && activeCite && (
-        <CitePopover source={activeSource} rect={activeCite.rect} onEnter={clearHoverTimer} onLeave={scheduleClose} onClose={() => { clearHoverTimer(); setActiveCite(null); }} />
+      {activeSource && visibleCite && (
+        <CitePopover source={activeSource} closing={!activeCite} rect={visibleCite.rect} onEnter={clearHoverTimer} onLeave={scheduleClose} onClose={() => { clearHoverTimer(); setActiveCite(null); }} />
       )}
       {shiftDown && termTooltip && createPortal(
         <div
@@ -797,7 +799,7 @@ function KnowledgeToggle({ message }: { message: Message }) {
   </>;
 }
 
-function CitePopover({ source, rect, onEnter, onLeave, onClose }: { source: Source; rect: DOMRect; onEnter: () => void; onLeave: () => void; onClose: () => void }) {
+function CitePopover({ closing, source, rect, onEnter, onLeave, onClose }: { closing: boolean; source: Source; rect: DOMRect; onEnter: () => void; onLeave: () => void; onClose: () => void }) {
   const popRef = useRef<HTMLDivElement>(null);
   // 浮窗通过 portal 挂在 document.body（#root 的祖先），React 合成 mouseenter/mouseleave/click
   // 在 portaled 元素上不触发——改用原生 addEventListener，与徽章一致
@@ -834,7 +836,7 @@ function CitePopover({ source, rect, onEnter, onLeave, onClose }: { source: Sour
     style.bottom = vh - rect.top + 4;
   }
   return createPortal(
-    <div className="cite-popover" ref={popRef} style={style}>
+    <div className="cite-popover" data-closing={closing} ref={popRef} style={style}>
       <div className="cite-popover-head">
         <img className="cite-popover-icon" alt="" src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(host || source.url)}&sz=64`} onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
         <div className="cite-popover-title">{source.title || source.url}</div>
@@ -870,6 +872,7 @@ interface Round {
 
 const RoundRail = React.memo(function RoundRail({ messages, onJump }: { messages: Message[]; onJump: (messageId: string) => void }) {
   const [hover, setHover] = useState<{ idx: number; rect: DOMRect } | null>(null);
+  const visibleHover = useExitValue(hover);
   const timer = useRef<number | null>(null);
   const clear = () => { if (timer.current) { window.clearTimeout(timer.current); timer.current = null; } };
   const scheduleClose = () => { clear(); timer.current = window.setTimeout(() => setHover(null), 200); };
@@ -908,20 +911,20 @@ const RoundRail = React.memo(function RoundRail({ messages, onJump }: { messages
           onClick={() => onJump(r.userId || r.answerId || r.id)}
         />
       ))}
-      {hover && createPortal(
+      {visibleHover && rounds[visibleHover.idx] && createPortal(
         <div
-          className="round-popover"
+          className="round-popover" data-closing={!hover}
           style={{
             position: "fixed",
-            top: Math.max(8, hover.rect.top),
-            left: hover.rect.right + 8,
+            top: Math.max(8, visibleHover.rect.top),
+            left: visibleHover.rect.right + 8,
             zIndex: 1000,
           }}
           onMouseEnter={clear}
           onMouseLeave={scheduleClose}
         >
-          {rounds[hover.idx]!.qPreview && <div className="round-popover-q">{rounds[hover.idx]!.qPreview}</div>}
-          {rounds[hover.idx]!.aPreview && <div className="round-popover-a">{rounds[hover.idx]!.aPreview}</div>}
+          {rounds[visibleHover.idx]!.qPreview && <div className="round-popover-q">{rounds[visibleHover.idx]!.qPreview}</div>}
+          {rounds[visibleHover.idx]!.aPreview && <div className="round-popover-a">{rounds[visibleHover.idx]!.aPreview}</div>}
         </div>,
         document.body,
       )}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { stripMentionTrigger } from "../src/client/mention.js";
+import { mentionAtCaret, stripMentionTrigger } from "../src/client/mention.js";
 
 describe("stripMentionTrigger", () => {
   it("删除行首的 @ 触发文本", () => {
@@ -17,4 +17,11 @@ describe("stripMentionTrigger", () => {
     expect(stripMentionTrigger("ab@", 2, 99)).toEqual({ text: "ab", caret: 2 });
     expect(stripMentionTrigger("abc", 99, 99)).toEqual({ text: "abc", caret: 3 });
   });
+});
+
+it("识别光标前的中英文提及，保留邮箱和普通文本", () => {
+  expect(mentionAtCaret("比较＠城市与电影", 5)).toEqual({ start: 2, end: 5, query: "城市" });
+  expect(mentionAtCaret("hello @", 7)).toEqual({ start: 6, end: 7, query: "" });
+  expect(mentionAtCaret("a@b.com", 7)).toBeNull();
+  expect(mentionAtCaret("@词 继续", 5)).toBeNull();
 });

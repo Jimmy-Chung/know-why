@@ -56,3 +56,9 @@ it("shows frosting only where actual graph content is clipped, not in blank cent
 it("handles an empty tree", () => {
   expect(buildTreeGeometry([])).toEqual({ nodes: [], width: 0, height: 0 });
 });
+
+it("includes disconnected branches in the conversation overview", () => {
+  const graph = buildTreeGeometry([card("root", null), card("child", "orphan"), card("orphan", "missing"), card("second", null)]);
+  expect(graph.nodes.map(node => node.card.id).sort()).toEqual(["child", "orphan", "root", "second"]);
+  expect(graph.nodes.find(node => node.card.id === "child")?.depth).toBe(1);
+});
