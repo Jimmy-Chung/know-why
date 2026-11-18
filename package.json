@@ -1,6 +1,6 @@
 {
   "name": "know-know",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "private": true,
   "description": "Know Know — 以知识探索分支组织对话的个人本机 AI 应用（1.0，无登录）",
   "type": "module",
