@@ -43,7 +43,7 @@ curl -s http://127.0.0.1:8080/api/health   # 应为 {"ok":true,...}
 ```
 
 > 在服务器上直接构建会得到匹配的 CPU 架构。若在 Apple Silicon 上构建再传到 amd64 服务器，用
-> `docker buildx build --platform linux/amd64 -t know-know:1.3.0 .`。
+> `docker buildx build --platform linux/amd64 -t know-why:1.17.0 .`。
 
 然后二选一装反向代理：
 

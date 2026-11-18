@@ -1,6 +1,6 @@
-# Know Know 生产镜像：单进程 Node 服务，同时托管前端静态资源与本地 SQLite。
+# know why 生产镜像：单进程 Node 服务，同时托管前端静态资源与本地 SQLite。
 #
-# 构建：docker build -t know-know:1.3.0 .
+# 构建：docker build -t know-why:1.17.0 .
 # 运行：docker compose up -d --build（推荐，见 docker-compose.yml）
 # 文档：docs/DEPLOYMENT.md
 

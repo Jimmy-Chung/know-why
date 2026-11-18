@@ -1,6 +1,6 @@
 import { getModelCatalog, invalidateModelCache, probeProvider, reasoningProtocol, reasoningRequest } from "./model-capabilities.js";
 import { normalizeThinkMode } from "../shared/reasoning.js";
-// Know Know 本地服务入口。
+// know why 本地服务入口。
 // 只监听回环地址；校验请求来源；不含登录模块。
 import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
@@ -78,7 +78,7 @@ app.use("*", async (c, next) => {
   // 口令门禁：/api/health 放行，供容器与反向代理健康检查。
   if (config.authPassword && c.req.path !== "/api/health") {
     if (!verifyBasicAuth(c.req.header("Authorization"), config.authPassword)) {
-      c.header("WWW-Authenticate", 'Basic realm="Know Know", charset="UTF-8"');
+      c.header("WWW-Authenticate", 'Basic realm="know why", charset="UTF-8"');
       return c.json({ error: "需要访问口令" }, 401);
     }
   }
@@ -681,7 +681,7 @@ if (existsSync(clientDist)) {
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) serve({ fetch: app.fetch, port: config.port, hostname: config.host }, (info) => {
   const shownHost = config.host === "0.0.0.0" || config.host === "::" ? "127.0.0.1" : config.host;
-  console.log(`Know Know 服务：http://${shownHost}:${info.port}（监听 ${config.host}:${info.port}）`);
+  console.log(`know why 服务：http://${shownHost}:${info.port}（监听 ${config.host}:${info.port}）`);
   console.log(`数据目录：${getDataDir()}`);
   console.log(config.authPassword ? "访问口令：已启用（HTTP Basic Auth）" : "访问口令：未启用");
   if (config.allowedOrigins.length) console.log(`额外允许来源：${config.allowedOrigins.join(", ")}`);
