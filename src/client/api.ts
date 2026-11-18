@@ -111,7 +111,8 @@ export const api = {
     const ctrl = new AbortController();
     let terminal = false;
     // 开发模式：Vite proxy 会缓冲 SSE 流，改为直连后端 5179；生产模式由后端同源托管，走相对路径。
-    const isDev = typeof window !== "undefined" && String(window.location.port).trim() === "5180";
+    // 用构建期常量判断，避免部署端口恰好是 5180 时被误判成开发模式。
+    const isDev = import.meta.env.DEV;
     const sseUrl = isDev ? `http://127.0.0.1:5179${BASE}/runs/${runId}/stream` : `${BASE}/runs/${runId}/stream`;
     fetch(sseUrl, { signal: ctrl.signal })
       .then(async (res) => {

@@ -1,0 +1,13 @@
+# Caddy 反代示例：自动申请并续期 HTTPS 证书，SSE 不做缓冲。
+# 用法：把域名换成你自己的（A 记录已指向本机），然后
+#   caddy run --config deploy/Caddyfile
+# 或把内容并入 /etc/caddy/Caddyfile。
+
+know.example.com {
+	encode zstd gzip
+
+	reverse_proxy 127.0.0.1:8080 {
+		# 流式回答要立即下发，不能等缓冲区攒满
+		flush_interval -1
+	}
+}

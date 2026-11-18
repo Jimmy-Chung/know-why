@@ -15,13 +15,20 @@ export function runMigrations(db: DBType = getDb()): number {
   `);
 
   const migrationsDir = join(__dirname, "..", "..", "migrations");
-  let files: string[] = [];
+  let files: string[];
   try {
     files = readdirSync(migrationsDir)
       .filter((f) => f.endsWith(".sql"))
       .sort();
   } catch {
-    return 0;
+    // 迁移目录缺失是部署错误（常见于只拷贝了编译产物）。静默返回 0 会让服务
+    // 带着空库启动、在后续查询处崩溃，错误信息完全指不到根因。
+    throw new Error(
+      `找不到数据库迁移目录：${migrationsDir}。请把 migrations/ 一并放到运行时目录（官方镜像已包含）。`,
+    );
+  }
+  if (files.length === 0) {
+    throw new Error(`数据库迁移目录为空：${migrationsDir}`);
   }
 
   const applied = new Set(

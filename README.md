@@ -1,8 +1,10 @@
-# Know Know 1.0
+# Know Know
 
 以「知识探索分支」组织对话的个人本机 AI 应用。每次追问沿选区生成独立分支，分支上下文互相隔离；会话内可检索已有内容并提问；长分支接近模型上限时自动摘要并保留原文。
 
-**1.0 为个人本机使用版本，不含登录/多用户模块**（多用户登录属于 1.1 规划）。
+支持本机直接运行，也支持 Docker 部署后通过 URL 访问（含公网域名 + HTTPS）。部署步骤见 [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)。
+
+**1.0 为个人本机使用版本，不含登录/多用户模块**（多用户登录属于 1.1 规划）。Docker 部署提供的是一道「单口令」门禁，不等于多用户隔离。
 
 ## 技术栈
 
@@ -52,11 +54,21 @@ npm run dev
 ### 生产模式（单进程，静态资源由本地服务托管）
 
 ```bash
-npm run build     # 构建前端到 dist-client/
-npm start         # 启动本地服务并托管前端
+npm run build     # 构建前端到 dist-client/、服务端到 dist-server/
+npm run start:prod  # node dist-server/server/index.js
 ```
 
 在浏览器打开 `http://127.0.0.1:5179`。
+
+### Docker（Mac 本机或云服务器）
+
+```bash
+cp .env.example .env     # 设置 KNOW_KNOW_AUTH_PASSWORD
+docker compose up -d --build
+```
+
+打开 `http://127.0.0.1:8080`（首次会弹出登录框，用户名任意，密码即上面的口令）。
+公网部署再加一层 Caddy/Nginx 反向代理即可用 `https://域名` 访问，完整步骤、环境变量、备份恢复与排错见 [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)。
 
 ### 数据目录
 
@@ -74,8 +86,9 @@ PORT=5180 npm start   # 自定义端口
 | 命令 | 说明 |
 |------|------|
 | `npm run dev` | 同时启动后端（tsx watch）与前端（vite） |
-| `npm run build` | 构建前端 |
-| `npm start` | 启动本地服务（生产） |
+| `npm run build` | 构建前端与服务端（`build:client` + `build:server`） |
+| `npm start` | 以 tsx 直接运行源码（开发用） |
+| `npm run start:prod` | 运行编译后的服务端（`dist-server/`） |
 | `npm run migrate` | 显式运行数据库迁移 |
 | `npm test` | 运行自动化测试（vitest） |
 | `npm run test:watch` | 测试观察模式 |
@@ -105,9 +118,13 @@ PORT=5180 npm start   # 自定义端口
 ```
 src/
   shared/        跨端共享类型与工具
-  server/        本地服务（Hono 路由、DB、编排器、适配器、摘要、检索）
+  server/        本地服务（Hono 路由、DB、编排器、适配器、摘要、检索、访问控制）
   client/        前端（React：层叠卡片、树导航、助手面板、设置）
 migrations/      SQLite 迁移脚本
 tests/           自动化测试
+deploy/          反向代理示例（Caddy / Nginx）
+Dockerfile       生产镜像
+docker-compose.yml
 dist-client/     前端构建产物（npm run build 后生成）
+dist-server/     服务端构建产物（npm run build 后生成）
 ```

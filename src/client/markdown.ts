@@ -3,6 +3,17 @@
 import katex from "katex";
 import "katex/dist/katex.min.css";
 import { marked } from "marked";
+import DOMPurify from "dompurify";
+
+// 渲染结果会被 dangerouslySetInnerHTML 直接插入页面。模型回答与联网抓取的网页正文
+// 都可能夹带原始 HTML，因此统一在这里做净化；Node 环境（测试）不渲染，直接跳过。
+const isBrowser = typeof (globalThis as { window?: unknown }).window !== "undefined";
+const purify = isBrowser ? DOMPurify : null;
+
+export function sanitizeHtml(html: string): string {
+  if (!purify || !purify.isSupported) return html;
+  return purify.sanitize(html);
+}
 
 // 用占位符在 marked 处理前隔离数学块，渲染后再还原，避免 marked 干扰公式内容
 const PLACEHOLDER = (i: number) => `@@KKMATH${i}@@`;
@@ -98,6 +109,9 @@ export function renderMarkdown(text: string): string {
   });
 
   let html = marked.parse(s, { async: false }) as string;
+
+  // 净化放在还原 KaTeX 之前：公式 HTML 由本地 KaTeX 生成，不需要也不应被过滤。
+  html = sanitizeHtml(html);
 
   // 还原数学块
   html = html.replace(/@@KKMATH(\d+)@@/g, (_m, i: string) => math[+i] ?? "");

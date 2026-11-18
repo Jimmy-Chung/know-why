@@ -32,9 +32,11 @@ import { indexConversation, indexEmbeddings, searchInSession, upsertTopic } from
 import { warmEmbeddings } from "./embedding.js";
 import { ulid } from "../shared/ids.js";
 import { backup, restore, exportJson } from "./backup.js";
+import { readServerConfig, isLoopbackHost } from "./config.js";
+import { isOriginAllowed, verifyBasicAuth } from "./access.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const PORT = Number(process.env.PORT) || 5179;
+const config = readServerConfig();
 
 runMigrations();
 recoverStalledRuns();
@@ -42,36 +44,48 @@ startRunWatchdog();
 
 export const app = new Hono();
 
-// 本地访问保护：只允许回环来源
+// 访问保护：来源校验 + 可选口令门禁。
+// 默认（HOST=127.0.0.1、无口令）与 1.0 行为一致：只接受本机来源。
+// 部署到容器/反向代理后，同源 POST 的 Origin 与 Host 一致即放行；跨站来源仍拒绝。
 app.use("*", async (c, next) => {
+  c.header("X-Content-Type-Options", "nosniff");
+  c.header("X-Frame-Options", "DENY");
+  c.header("Referrer-Policy", "no-referrer");
+
   const origin = c.req.header("Origin") || "";
   const host = c.req.header("Host") || "";
-  // 允许无 Origin（同源/curl）或本地来源
-  if (origin && !isLocalOrigin(origin, host)) {
-    return c.json({ error: "拒绝非本地访问" }, 403);
+  const forwardedHost = c.req.header("X-Forwarded-Host") || "";
+
+  if (origin) c.header("Vary", "Origin");
+  const allowed = isOriginAllowed({
+    origin,
+    hostHeader: host,
+    forwardedHost,
+    allowedOrigins: config.allowedOrigins,
+    trustProxy: config.trustProxy,
+  });
+  if (!allowed) {
+    return c.json({ error: "拒绝非本地来源的跨站请求" }, 403);
   }
-  // 允许本地跨域（开发模式前端 5180 直连后端 5179 的 SSE）
+
+  // 允许本机跨域（开发模式前端 5180 直连后端 5179 的 SSE）
   if (origin) {
     c.header("Access-Control-Allow-Origin", origin);
-    c.header("Access-Control-Allow-Headers", "Content-Type");
+    c.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
     c.header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
   }
   if (c.req.method === "OPTIONS") return c.body(null, 204);
+
+  // 口令门禁：/api/health 放行，供容器与反向代理健康检查。
+  if (config.authPassword && c.req.path !== "/api/health") {
+    if (!verifyBasicAuth(c.req.header("Authorization"), config.authPassword)) {
+      c.header("WWW-Authenticate", 'Basic realm="Know Know", charset="UTF-8"');
+      return c.json({ error: "需要访问口令" }, 401);
+    }
+  }
+
   await next();
 });
-
-function isLocalOrigin(origin: string, host: string): boolean {
-  try {
-    const u = new URL(origin);
-    return (
-      u.hostname === "127.0.0.1" ||
-      u.hostname === "localhost" ||
-      u.hostname === "0.0.0.0"
-    );
-  } catch {
-    return false;
-  }
-}
 
 // ---- Provider ----
 app.get("/api/providers", (c) => c.json(repo.providers.list()));
@@ -671,8 +685,14 @@ if (existsSync(clientDist)) {
   app.use("/*", serveStatic({ root: join(__dirname, "..", "..", "dist-client") }));
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) serve({ fetch: app.fetch, port: PORT, hostname: "127.0.0.1" }, (info) => {
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) serve({ fetch: app.fetch, port: config.port, hostname: config.host }, (info) => {
   warmEmbeddings();
-  console.log(`Know Know 本地服务：http://127.0.0.1:${info.port}`);
+  const shownHost = config.host === "0.0.0.0" || config.host === "::" ? "127.0.0.1" : config.host;
+  console.log(`Know Know 服务：http://${shownHost}:${info.port}（监听 ${config.host}:${info.port}）`);
   console.log(`数据目录：${getDataDir()}`);
+  console.log(config.authPassword ? "访问口令：已启用（HTTP Basic Auth）" : "访问口令：未启用");
+  if (config.allowedOrigins.length) console.log(`额外允许来源：${config.allowedOrigins.join(", ")}`);
+  if (!isLoopbackHost(config.host) && !config.authPassword) {
+    console.warn("⚠️  已监听非回环地址且未设置 KNOW_KNOW_AUTH_PASSWORD：任何能访问该端口的人都能读取全部会话并使用你的模型 Key。");
+  }
 });
