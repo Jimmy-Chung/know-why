@@ -1,5 +1,5 @@
 import type { ProviderCapabilities, ProviderConfig, ProviderType, ThinkMode } from '../shared/types.js';
-import { REASONING_EFFORTS, THINK_LABELS, UNKNOWN_REASONING, normalizeThinkMode, reasoningOptions, type ReasoningCapabilities, type ReasoningEffort, type ModelCatalog } from '../shared/reasoning.js';
+import { REASONING_EFFORTS, UNKNOWN_REASONING, normalizeThinkMode, reasoningOptions, type ReasoningCapabilities, type ReasoningEffort, type ModelCatalog } from '../shared/reasoning.js';
 import { getSecret } from './secret.js';
 import * as repo from './repo.js';
 
@@ -249,23 +249,6 @@ function officialBase(type: ProviderType): string {
   return "";
 }
 
-export function describeCatalog(catalog: ModelCatalog, resolvedModel: string): string {
-  const parts = [`连接成功 · ${resolvedModel}`];
-  parts.push(`上下文 ${catalog.contextWindow.toLocaleString()} tokens`);
-  if (catalog.maxOutputTokens) parts.push(`输出上限 ${catalog.maxOutputTokens.toLocaleString()}`);
-  if (catalog.reasoning.status === "supported") {
-    parts.push(
-      catalog.reasoning.efforts.length
-        ? `推理 ${catalog.reasoning.efforts.map((e) => THINK_LABELS[e] ?? e).join(" / ")}`
-        : "支持思考开关",
-    );
-  } else {
-    parts.push("无可调推理");
-  }
-  parts.push(catalog.webSearch ? (catalog.forceSearch ? "原生联网（可强制）" : "原生联网") : "无原生联网");
-  return parts.join(" · ");
-}
-
 // 保存 Provider 前的验证：只读取 /models，不落库、不记录密钥、不发起付费对话。
 export async function probeProvider(input: {
   type: ProviderType;
@@ -325,7 +308,7 @@ export async function probeProvider(input: {
   }
   return {
     ok: true,
-    detail: describeCatalog(catalog, matched?.id ?? input.model),
+    detail: "连接成功",
     catalog,
     capabilities: capabilitiesFromCatalog(catalog),
     resolvedModel: matched?.id ?? input.model,

@@ -193,9 +193,6 @@ export function ProviderDialog({ provider, onClose, onSaved }: ProviderDialogPro
             {verify.text}
           </div>
         )}
-        {verify.status === "ok" && verify.resolvedModel && verify.resolvedModel !== pModel.trim() && (
-          <div className="settings-note ok">已按别名匹配到 {verify.resolvedModel}（保存后仍使用你填写的模型名）</div>
-        )}
         {error && <div className="settings-note err" role="alert">{error}</div>}
       </div>
     </div>
