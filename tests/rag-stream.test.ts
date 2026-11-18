@@ -65,9 +65,9 @@ describe("assistant RAG streaming lifecycle",()=>{
     const second=await post(conv.id,"它的限制呢");e=events(second.runId);orchestrator.startAssistantRunIfPending(second.runId);await e.done;
     expect(state.requests[1]!.messages.some(m=>m.role==="assistant"&&m.content.includes("离线"))).toBe(true);
     const other=await post(conv.id,"它的限制呢","other");e=events(other.runId);orchestrator.startAssistantRunIfPending(other.runId);await e.done;
-    expect(state.requests).toHaveLength(2); // The new thread has no subject to resolve: no evidence, no LLM call.
+    expect(state.requests).toHaveLength(3); // 新线程没有历史可承接，但会话语料仍会随请求发送
     const direct=await post(conv.id,"星桥协议限制","fresh");e=events(direct.runId);orchestrator.startAssistantRunIfPending(direct.runId);await e.done;
-    expect(state.requests[2]!.messages.filter(m=>m.role==="assistant")).toHaveLength(0);
+    expect(state.requests[3]!.messages.filter(m=>m.role==="assistant")).toHaveLength(0);
     const repeat=await post(conv.id,"星桥协议是什么");expect(repeat.runId).not.toBe(first.runId);
   });
   it("stopping preserves partial text and does not mark it complete",async()=>{
@@ -80,9 +80,12 @@ describe("assistant RAG streaming lifecycle",()=>{
     state.mode="error";const conv=setup();const r=await post(conv.id,"星桥协议");const e=events(r.runId);orchestrator.startAssistantRunIfPending(r.runId);await e.done;
     expect(e.seen.at(-1)!.type).toBe("error");expect(repo.assistant.list(conv.id).find(m=>m.role==="assistant")!.status).toBe("failed");
   });
-  it("returns an explicit no-evidence response without spending a model call",async()=>{
-    const conv=setup();const r=await post(conv.id,"完全陌生的火星矿物");const e=events(r.runId);orchestrator.startAssistantRunIfPending(r.runId);await e.done;
-    expect(state.requests).toHaveLength(0);expect(repo.assistant.list(conv.id).find(m=>m.role==="assistant")!.content).toContain("未检索到");
+  it("returns an explicit no-evidence response without spending a model call when the conversation is empty",async()=>{
+    // 空会话：没有可发送的语料，直接回提示，不调用模型
+    const p=repo.providers.create({type:"custom",name:"empty",api_base:"http://127.0.0.1:1",default_model:"test",is_default:false,capabilities:{web_search:false,thinking:false,tool_calls:false,force_search:false,models:[],context_window:32000},secret_ref:"",has_secret:false});
+    const conv=repo.conversations.create(p,"test","off","default");repo.cards.createMain(conv.id);
+    const r=await post(conv.id,"完全陌生的火星矿物");const e=events(r.runId);orchestrator.startAssistantRunIfPending(r.runId);await e.done;
+    expect(state.requests).toHaveLength(0);expect(repo.assistant.list(conv.id).find(m=>m.role==="assistant")!.content).toContain("还没有可用于回答");
     expect(repo.runs.get(r.runId)!.usage).toMatchObject({prompt_tokens:0,completion_tokens:0});
   });
   it("reconnects to the exact in-memory partial answer before the next DB flush",async()=>{

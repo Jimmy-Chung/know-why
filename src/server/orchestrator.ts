@@ -26,6 +26,7 @@ import { completeChat } from "./complete.js";
 import { markdownToPlaintext } from "./selection.js";
 import { indexConversation, retrievePassages } from "./knowledge.js";
 import { assistantHistory, retrievalQuestion, buildRagRequest } from "./rag.js";
+import { buildConversationCorpus, buildCorpusRequest } from "./assistant-corpus.js";
 import { getDb } from "./db.js";
 
 // 每个 run 的事件订阅器
@@ -617,21 +618,35 @@ async function executeAssistant(conv: Conversation, run: Run, question: string, 
     const provider = repo.providers.get(conv.provider_id)!;
     emit(run.id, { type:"status", run_id:run.id, status:"running", detail:"正在查找相关对话……" });
     const history = assistantHistory(repo.assistant.list(conv.id),threadId,userMessageId);
-    buildRagRequest(question,history,[],provider.capabilities?.context_window || 32000,quote); // reject oversized questions before embedding
-    const query = retrievalQuestion(question,history);
-    const found = await retrievePassages(conv.id,query,40,controller.signal,scopeCardIds);
-    controller.signal.throwIfAborted();
-    // Backfill old sessions without delaying this keyword-based answer.
-    const prepared = buildRagRequest(question,history,found.candidates,provider.capabilities?.context_window || 32000,quote);
-    metrics = { retrieval_ms:performance.now()-started,candidate_count:found.candidates.length,evidence_count:prepared.evidence.length,
-      estimated_input_tokens:prepared.inputTokens,evidence_tokens:prepared.evidenceTokens,cache_hit:Number(found.cacheHit),semantic_ready:Number(found.semanticReady) };
+    const contextWindow = provider.capabilities?.context_window || 32000;
+    buildRagRequest(question,history,[],contextWindow,quote); // reject oversized questions before building context
+    // 优先把「卡片树目录 + 全量问答」交给模型自行定位；超出预算才退回关键词检索。
+    const outputReserve = Math.min(3000, Math.floor(contextWindow * 0.25));
+    const corpus = buildConversationCorpus(conv.id, scopeCardIds, Math.floor(contextWindow * 0.85) - outputReserve - 512);
+    const direct = corpus.evidence.length ? buildCorpusRequest(question,history,corpus,contextWindow,quote) : null;
+    let prepared: { messages: any[]; evidence: any[]; evidenceTokens: number; inputTokens: number; outputReserve: number };
+    let candidateCount = corpus.messageCount;
+    let cacheHit = false;
+    let semanticReady = false;
+    if (direct) {
+      prepared = direct;
+    } else {
+      const query = retrievalQuestion(question,history);
+      const found = await retrievePassages(conv.id,query,40,controller.signal,scopeCardIds);
+      controller.signal.throwIfAborted();
+      prepared = buildRagRequest(question,history,found.candidates,contextWindow,quote);
+      candidateCount = found.candidates.length;
+      cacheHit = found.cacheHit;
+      semanticReady = found.semanticReady;
+    }
+    metrics = { retrieval_ms:performance.now()-started,candidate_count:candidateCount,evidence_count:prepared.evidence.length,
+      estimated_input_tokens:prepared.inputTokens,evidence_tokens:prepared.evidenceTokens,cache_hit:Number(cacheHit),semantic_ready:Number(semanticReady) };
     answer = repo.assistant.add({ conversation_id:conv.id,role:"assistant",content:"",evidence:prepared.evidence,run_id:run.id,thread_id:threadId,status:"streaming" });
     liveAssistantMessages.set(run.id,answer);
     emit(run.id,{type:"assistant_message",message:answer});
     emit(run.id,{type:"status",run_id:run.id,status:"running",detail:"正在依据会话资料回答……"});
     if (!prepared.evidence.length) {
-      full = "本次未检索到足够的相关内容。你可以补充具体术语或分支名称后再试。";
-      if (!found.semanticReady) full += "新内容仍可能在整理中，也可以稍后重试。";
+      full = "本会话还没有可用于回答的完整问答内容，可以先在左侧开始一段对话。";
       firstToken = performance.now() - started;
       emit(run.id,{type:"assistant_delta",message_id:answer.id,text:full});
       repo.runs.update(run.id,{usage:{prompt_tokens:0,completion_tokens:0}});
