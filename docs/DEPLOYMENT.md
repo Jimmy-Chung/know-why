@@ -91,7 +91,6 @@ sudo certbot --nginx -d 你的域名
 ## 4. 首次使用
 
 1. 用口令登录后，点左下角「管理模型服务」，新增 Provider（OpenAI / DeepSeek / 自定义兼容接口），填 API Base、默认模型、API Key。
-2. 需要联网搜索时，在同一设置页填 Tavily API Key。
 3. 新建会话开始使用。API Key 只存在服务端数据卷里（容器内优先 Keychain，容器里没有则自动用 AES-256-GCM 加密文件）。
 
 ---
