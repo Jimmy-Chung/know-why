@@ -1,6 +1,6 @@
 {
   "name": "know-know",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "private": true,
   "description": "Know Know — 以知识探索分支组织对话的个人本机 AI 应用（1.0，无登录）",
   "type": "module",
@@ -25,7 +25,6 @@
     "@floating-ui/react": "^0.27.20",
     "@hono/node-server": "^1.13.0",
     "@hono/zod-validator": "^0.4.1",
-    "@huggingface/transformers": "^4.2.0",
     "better-sqlite3": "^11.3.0",
     "dompurify": "^3.4.18",
     "hono": "^4.6.0",

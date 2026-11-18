@@ -6,15 +6,6 @@ import * as repo from "./repo.js";
 import { markdownToPlaintext } from "./selection.js";
 import { isOverview } from "./rag.js";
 import { ulid } from "../shared/ids.js";
-import {
-  EMBEDDING_MODEL,
-  embed,
-  embedQuery,
-  embeddingAvailable,
-  fromBlob,
-  toBlob,
-  dot,
-} from "./embedding.js";
 
 // 查询侧停用双字组：高频结构词切出的双字组，单独无区分度，
 // 会召回大量无关消息并干扰 rank 排序。仅在查询时过滤，索引侧保留完整。
@@ -161,42 +152,6 @@ export function indexConversation(conversationId: string): void {
   })();
 }
 
-// One active job per conversation. Concurrent requests merge and catch new content
-// after awaits. Foreign keys + fingerprint checks prevent stale vectors returning.
-const jobs = new Map<string, Promise<void>>();
-export function indexEmbeddings(conversationId: string): Promise<void> {
-  const key = `${getDbPath()}:${conversationId}`;
-  const running = jobs.get(key);
-  if (running) return running;
-  const work = (async () => {
-    const db = getDb();
-    while (true) {
-      indexConversation(conversationId);
-      if (!repo.conversations.get(conversationId) || repo.conversations.get(conversationId)?.deleted_at) return;
-      const batch = db.prepare(`SELECT p.* FROM knowledge_passage p LEFT JOIN knowledge_passage_vector v
-        ON v.passage_id=p.id AND v.model=? WHERE p.conversation_id=? AND v.passage_id IS NULL ORDER BY p.id LIMIT 16`)
-        .all(EMBEDDING_MODEL,conversationId) as PassageRow[];
-      if (!batch.length) return;
-      const vectors = await embed(batch.map(p => `${p.path.slice(-60)}\n${p.question.slice(0,60)}\n${p.text}`));
-      if (vectors.length !== batch.length) throw new Error("向量服务返回数量不匹配");
-      indexConversation(conversationId);
-      db.transaction(() => {
-        let inserted = 0;
-        for (let i=0;i<batch.length;i++) {
-          const p = batch[i]!; const vector = vectors[i];
-          if (!vector || !db.prepare("SELECT 1 FROM knowledge_passage WHERE id=? AND fingerprint=?").get(p.id,p.fingerprint)) continue;
-          inserted += db.prepare("INSERT OR IGNORE INTO knowledge_passage_vector VALUES(?,?,?,?)").run(p.id,EMBEDDING_MODEL,toBlob(vector),vector.length).changes;
-        }
-        if (inserted) db.prepare("UPDATE knowledge_index_state SET vector_revision=vector_revision+1 WHERE conversation_id=?").run(conversationId);
-      })();
-      await new Promise<void>(resolve => setImmediate(resolve));
-    }
-  })();
-  jobs.set(key,work);
-  void work.finally(() => { if (jobs.get(key) === work) jobs.delete(key); }).catch(() => {});
-  return work;
-}
-
 interface SearchResult { candidates: Candidate[]; cacheHit: boolean; semanticReady: boolean; revision: string }
 const searchCache = new Map<string, { value: SearchResult; expires: number }>();
 function candidate(row: PassageRow, score: number): Candidate {
@@ -222,7 +177,8 @@ export async function retrievePassages(conversationId: string, question: string,
   const scopeParams = scope && scope.size ? [...scope] : [];
   const state = db.prepare("SELECT * FROM knowledge_index_state WHERE conversation_id=?").get(conversationId) as { revision:number; vector_revision:number };
   const revision = `${state.revision}:${state.vector_revision}:${scope ? [...scope].sort().join(",") : "all"}`;
-  const semanticReady = await embeddingAvailable();
+  // 语义检索已移除：只用关键词召回，知识助手的语义能力由会话模型自行处理。
+  const semanticReady = false;
   signal?.throwIfAborted();
   const key = JSON.stringify([getDbPath(),conversationId,revision,semanticReady,question,limit]);
   const cached = searchCache.get(key);
@@ -258,18 +214,6 @@ export async function retrievePassages(conversationId: string, question: string,
       FROM knowledge_passage p WHERE p.conversation_id=? ${scopeClause}
     ) WHERE position=1 ORDER BY created_at DESC LIMIT 40`).all(conversationId,...scopeParams) as PassageRow[];
     add(representatives,1.2);
-  }
-  // Semantic retrieval always competes with lexical retrieval, rather than only filling empty slots.
-  if (semanticReady) {
-    try {
-      const qVec = await embedQuery(question);
-      signal?.throwIfAborted();
-      const rows = db.prepare(`SELECT p.*,v.embedding,v.dim FROM knowledge_passage p JOIN knowledge_passage_vector v ON p.id=v.passage_id
-        WHERE p.conversation_id=? AND v.model=? ${scopeClause}`).all(conversationId,EMBEDDING_MODEL,...scopeParams) as (PassageRow & {embedding:Buffer; dim:number})[];
-      const sorted = rows.filter(r=>r.dim === qVec.length).map(row=>({row,score:dot(qVec,fromBlob(row.embedding,row.dim))}))
-        .filter(r=>r.score>=.3).sort((a,b)=>b.score-a.score).slice(0,60);
-      add(sorted.map(r=>r.row));
-    } catch (error) { signal?.throwIfAborted(); /* Keyword results remain usable if embeddings fail. */ }
   }
   signal?.throwIfAborted();
   // Re-check after asynchronous inference: edits/deletes may have invalidated candidates.

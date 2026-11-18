@@ -26,7 +26,6 @@ docker compose down           # 停止（数据保留在卷里）
 docker compose up -d          # 再次启动
 ```
 
-首次启动会从 HuggingFace 下载约 448MB 的 embedding 模型（缓存进数据卷，只下一次）。网络不通时设 `KNOW_KNOW_EMBEDDINGS=off`，知识助手退回关键词检索。
 
 ---
 
@@ -81,7 +80,6 @@ sudo certbot --nginx -d 你的域名
 | `KNOW_KNOW_AUTH_PASSWORD` | 空（不鉴权） | 访问口令。**公网部署必须设置**；设置了才启用登录框 |
 | `KNOW_KNOW_ALLOWED_ORIGINS` | 空 | 额外放行的浏览器来源，逗号分隔 |
 | `KNOW_KNOW_TRUST_PROXY` | `0` | 设为 `1` 时信任 `X-Forwarded-Host` |
-| `KNOW_KNOW_EMBEDDINGS` | 开 | 设为 `off` 关闭本地向量检索 |
 | `USER` | `default` | 参与本地密钥派生的稳定标识，**不要改**，否则已存的 Key 无法解密 |
 
 什么时候需要 `KNOW_KNOW_ALLOWED_ORIGINS`？只有反向代理**改写**了 Host 头、导致浏览器 Origin 与 Host 对不上时。本文两份配置都保留了 Host，所以通常不用设。
@@ -103,7 +101,6 @@ sudo certbot --nginx -d 你的域名
 /data/know-know.sqlite   会话、卡片、消息、分支、索引
 /data/attachments/       附件本体
 /data/backups/           应用内备份
-/data/models/            embedding 模型缓存（约 448MB）
 /data/secrets.enc        API Key 加密文件（容器内无 Keychain 时）
 ```
 
@@ -164,8 +161,7 @@ docker compose up -d
 | 回答不逐字出现，最后一次性蹦出来 | 反代开了缓冲：`proxy_buffering off` / Caddy `flush_interval -1` |
 | 长回答中途断开 | 反代读超时太短，调到 3600s |
 | 容器启动失败，日志提示原生模块 | 预编译包下载失败。镜像构建阶段已装 `python3 make g++ libsecret-1-dev`，重试构建；国内网络可先配置 npm 镜像 |
-| 知识助手检索效果差 | 模型没下载成功 → 看日志是否有 embedding 报错；或显式设 `KNOW_KNOW_EMBEDDINGS=off` 接受纯关键词 |
-| 磁盘一直涨 | `/data/models` 约 448MB + 备份累积，定期清理 `backups/` |
+| 磁盘一直涨 | 备份累积，定期清理 `backups/` |
 | 健康检查一直 unhealthy | 多半是端口改了但 healthcheck 没跟着改，检查 `PORT` |
 
 ---
@@ -174,8 +170,8 @@ docker compose up -d
 
 | 场景 | 配置 |
 |---|---|
-| 个人自用（开向量检索） | 2 vCPU / 2GB 内存 / 20GB 磁盘 |
-| 个人自用（`KNOW_KNOW_EMBEDDINGS=off`） | 1 vCPU / 1GB 内存 / 10GB 磁盘 |
+| 个人自用 | 2 vCPU / 1GB 内存 / 10GB 磁盘 |
+| 最低配置 | 1 vCPU / 512MB 内存 / 5GB 磁盘 |
 | 多人共用 | 不建议——先等 1.1 的多用户隔离；当前只能做到「共享一个空间」 |
 
 单实例限制：SQLite 是单写者，不能水平扩容，也不能零停机滚动发布。数据目录必须放在**块存储**上，不要放 NFS/EFS 这类网络文件系统。
