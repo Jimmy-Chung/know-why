@@ -1,4 +1,5 @@
 import { Icon } from "./ui/Icon.js";
+import { NOTES_ENABLED } from "../../shared/features.js";
 import { Button, IconButton } from "./ui/Button.js";
 import { Tooltip } from "./ui/Tooltip.js";
 import { CopyButton } from "./ui/CopyButton.js";
@@ -506,7 +507,7 @@ const AssistantMessageView = React.memo(function AssistantMessageView({ message,
     <div className="assistant-answer-turn">
       <EvidenceBadge messageId={message.id} content={message.content || ""} evidence={evidenceList} cards={cards} allMessages={allMessages} onGoToMessage={onGoToMessage} html={html} contentRef={contentRef} />
       <div className="assistant-message-actions assistant-message-actions--answer">
-        <IconButton icon="notePlus" label="存为笔记" onClick={() => onNewNote(source)} />
+        {NOTES_ENABLED && <IconButton icon="notePlus" label="存为笔记" onClick={() => onNewNote(source)} />}
         <CopyButton text={plainText} iconOnly />
       </div>
       {message.status === "stopped" && <small>已停止生成</small>}
