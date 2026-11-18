@@ -130,6 +130,15 @@ export const providers = {
       );
     return this.get(id);
   },
+  // 仅更新能力快照，不递增 config_version。
+  // 能力探测是派生数据：若走 update()，每次探测都会 bump 版本、使缓存与已锁定会话
+  // 的配置版本失效，形成「探测 → 版本变 → 重探测」的循环。
+  setCapabilities(id: string, capabilities: ProviderCapabilities): void {
+    if (!this.get(id)) return;
+    getDb()
+      .prepare("UPDATE provider_config SET capabilities=?, updated_at=? WHERE id=?")
+      .run(JSON.stringify(capabilities), new Date().toISOString(), id);
+  },
   setDefault(id: string): void {
     getDb().exec("BEGIN");
     try {

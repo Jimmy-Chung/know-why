@@ -1,6 +1,9 @@
 # 1.0 输入框联网与推理设置补充说明
 
-实现与官方文档核对日期：2026-09-07。
+实现与官方文档核对日期：2026-09-07，1.4 增补核对于 2026-11-18。
+
+> 1.4 变更：能力探测从「只认推理档位」扩展到「推理档位 + 上下文窗口 + 输出上限 + 输入模态 + 原生联网」，
+> 并让 DeepSeek 的原生搜索真正接上。见文末「1.4 增补」。
 
 ## 交互
 
@@ -56,3 +59,30 @@ PATCH 会话设置在服务端再次校验模型能力，拒绝非法档位；�
 - [GPT-5 与 GPT-5.1 参数说明](https://cdn.openai.com/pdf/47c0215b-8976-4f60-8e13-d69c2ddbc15e/a-practical-guide-to-building-with-gpt-5.pdf)
 - [GPT-5.2 参数说明](https://developers.openai.com/api/docs/guides/latest-model?model=gpt-5.2)
 - [GPT-5.4](https://developers.openai.com/api/docs/models/gpt-5.4)、[GPT-5.4 Mini](https://developers.openai.com/api/docs/models/gpt-5.4-mini)、[GPT-5.5](https://developers.openai.com/api/docs/models/gpt-5.5)、[GPT-5.6 Sol](https://developers.openai.com/api/docs/models/gpt-5.6-sol)、[GPT-6 Astra](https://developers.openai.com/api/docs/models/gpt-6-astra)
+
+## 1.4 增补：窗口、模态与原生联网
+
+一次性从 `GET /models` 读取并落库（不递增 `config_version`，避免「探测 → 版本变 → 重探测」循环）：
+
+| 字段 | 来源 | 用途 |
+|---|---|---|
+| `context_window` / `context_length` | 接口 | 上下文预算、摘要触发线 |
+| `max_output_tokens` | 接口 | 输出预留 |
+| `input_modalities` | 接口 | 是否支持图片输入 |
+| `effort.supported_levels` / `default_level` | DeepSeek | 推理档位（与 OpenRouter 的 `reasoning.supported_efforts` 并列解析） |
+| 原生联网 | 协议规则 | `openai` 可强制；`deepseek` 只能自动；`openrouter`/`custom` 不支持 |
+
+**模型别名**：DeepSeek 保留旧名可调，但 `/models` 只列新名（`deepseek-v4-flash` → `deepseek-flash`）。
+能力匹配时先按原 ID、再按别名查找，否则拿不到窗口与档位。别名表在 `MODEL_ALIASES`。
+
+**DeepSeek 原生联网**：声明 `tools: [{type:"deepseek_web_search", name:"deepseek_web_search"}]`
+后由模型自行决定是否搜索；`tool_choice` 不能指定该工具，因此：
+
+- 自动联网 → 走原生；
+- 强制联网 → 退回独立搜索（Tavily）；未配置 Tavily 时明确报错，不静默降级；
+- 流式增量里的 `server_tool_calls[].calls[].action.queries` 转成搜索状态，
+  `sources` 与 `annotations[].url_citation` 去重后落为来源。
+
+**输入框表现**：联网可用性 = 模型原生搜索 或 已配置的独立搜索。
+只有原生时显示「自动联网 / 强制联网（Tavily）/ 不联网」；只有 Tavily 时标注「（Tavily）」；
+两者都没有时显示「联网不可用」并禁用。推理档位仍只列接口确认或规则覆盖的档位。

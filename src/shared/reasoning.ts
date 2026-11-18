@@ -16,6 +16,16 @@ export interface ModelCatalog {
   models: string[];
   model: string;
   reasoning: ReasoningCapabilities;
+  /** 模型上下文窗口（token）。优先取接口返回值，其次 Provider 能力，最后回退默认。 */
+  contextWindow: number;
+  /** 单次响应的最大输出 token（接口返回时才有）。 */
+  maxOutputTokens?: number;
+  /** 输入模态，例如 ["text"] 或 ["text","image"]。 */
+  inputModalities: string[];
+  /** 模型/协议是否具备原生联网搜索。 */
+  webSearch: boolean;
+  /** 能否强制触发原生搜索（依赖接口是否支持 tool_choice 强约束）。 */
+  forceSearch: boolean;
   warning?: string;
 }
 export const UNKNOWN_REASONING: ReasoningCapabilities = {
