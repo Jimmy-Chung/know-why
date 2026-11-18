@@ -190,7 +190,6 @@ export const api = {
 
   // Backup
   backup: () => fetch(`${BASE}/backup`, { method: "POST" }).then(j<{ ok: boolean; file: string }>),
-  exportData: () => fetch(`${BASE}/export`).then(j<any>),
 };
 
 function ct() {
