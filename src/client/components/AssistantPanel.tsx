@@ -377,7 +377,7 @@ export function AssistantPanel({ conv, provider, messages, cards, allMessages, c
       ) : (
         <>
           <div className="assistant-body" ref={bodyRef} onMouseUp={handleSelection} onKeyUp={handleSelection}>
-            {currentMsgs.length === 0 && <p className="assistant-empty">{currentThreadId ? "新建问答线程，输入你的问题。" : "问问我刚才探索过哪些概念？或是比较两个分支的内容。"}</p>}
+            {currentMsgs.length === 0 && <p className="assistant-empty">{currentThreadId ? "新建问答线程，输入你的问题。" : "试试问「我们刚才探索过哪些概念？」，或用 @ 选中卡片让助手比较差异。"}</p>}
             {currentMsgs.map((m) => (
               <AssistantMessageView key={m.id} message={m} cards={cards} allMessages={allMessages} onGoToMessage={onGoToMessage} onNewNote={onNewNote} />
             ))}
