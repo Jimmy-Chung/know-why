@@ -14,3 +14,30 @@ export function mentionAtCaret(input: string, caret: number) {
   const query = match[1]!;
   return { query, start: caret - query.length - 1, end: caret };
 }
+
+// The assistant API stores an exact list. Expand only at selection time, so
+// reopening an old question or retrying it never reintroduces excluded cards.
+export function selectMentionBranch(
+  cards: ReadonlyArray<{ id: string; parent_card_id: string | null }>,
+  selected: readonly string[],
+  rootId: string,
+  toggle: boolean,
+): string[] {
+  const children = new Map<string, string[]>();
+  for (const card of cards) {
+    if (!card.parent_card_id) continue;
+    const siblings = children.get(card.parent_card_id);
+    if (siblings) siblings.push(card.id);
+    else children.set(card.parent_card_id, [card.id]);
+  }
+  const branch = new Set<string>();
+  const pending = [rootId];
+  while (pending.length) {
+    const id = pending.pop()!;
+    if (branch.has(id)) continue;
+    branch.add(id);
+    for (const child of children.get(id) ?? []) pending.push(child);
+  }
+  if (toggle && selected.includes(rootId)) return selected.filter(id => !branch.has(id));
+  return [...new Set([...selected, ...branch])];
+}
