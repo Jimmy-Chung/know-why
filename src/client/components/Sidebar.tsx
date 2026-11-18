@@ -50,7 +50,7 @@ export function Sidebar(props: SidebarProps) {
         <img className="brand-logo" src={brandIcon} width={40} height={40} alt="" />
         <span>
           <span className="brand-wordmark">KNOW WHY</span>
-          <small>沿着知识继续探索吧</small>
+          <small>沿着知识继续探索</small>
         </span>
       </div>
 
