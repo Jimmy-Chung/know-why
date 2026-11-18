@@ -8,7 +8,7 @@ import { createPortal } from "react-dom";
 import { renderMarkdown, markdownToPlainText } from "../markdown.js";
 import { MentionGraph } from "./MentionGraph.js";
 import { useExitValue } from "../usePanelPresence.js";
-import { mentionAtCaret, stripMentionTrigger } from "../mention.js";
+import { mentionAtCaret, selectMentionBranch, stripMentionTrigger } from "../mention.js";
 import type { Conversation, ProviderConfig, KnowledgeAssistantMessage, Card, Message, SSEEvent } from "../../shared/types.js";
 import { api } from "../api.js";
 
@@ -57,7 +57,7 @@ export function AssistantPanel({ conv, provider, messages, cards, allMessages, c
   // @ 作用域：用户可选若干卡片，本次提问的检索只在这些卡范围内进行
   const [scopeCardIds, setScopeCardIds] = useState<string[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [picker, setPicker] = useState<{ query: string; idx: number; start: number; end: number } | null>(null);
+  const [picker, setPicker] = useState<{ query: string; idx: number; start: number; end: number; draft?: string[] } | null>(null);
 
   const shownPicker = useExitValue(picker);
 
@@ -179,7 +179,7 @@ export function AssistantPanel({ conv, provider, messages, cards, allMessages, c
     if (!picker) return;
     const onDown = (e: Event) => {
       const t = e.target as HTMLElement;
-      if (t.closest(".mention-picker") || t === textareaRef.current) return;
+      if (t.closest(".mention-picker") || t === textareaRef.current || (picker.draft && t.closest(".send-btn"))) return;
       setPicker(null);
     };
     document.addEventListener("pointerdown", onDown);
@@ -231,18 +231,18 @@ export function AssistantPanel({ conv, provider, messages, cards, allMessages, c
 
   const handleRemoveQuote = useCallback(() => setPendingQuote(null), []);
 
-  // @ 选择器候选：本会话所有卡片，过滤已选，按 title 模糊匹配
   const pickerCards = useMemo(() => {
-    const q = shownPicker?.query.toLowerCase() ?? "";
-    return cards
-      .filter((c) => !scopeCardIds.includes(c.id))
-      .filter((c) => !q || (c.title || "主卡片").toLowerCase().includes(q));
-  }, [shownPicker?.query, cards, scopeCardIds]);
+    const query = shownPicker?.query.toLowerCase() ?? "";
+    return cards.filter(card => (card.title || "主卡片").toLowerCase().includes(query));
+  }, [shownPicker?.query, cards]);
 
-  const addScopeCard = useCallback((cardId: string) => {
-    if (!picker) return;
-    setScopeCardIds(prev => prev.includes(cardId) ? prev : [...prev, cardId]);
-    const { text, caret } = stripMentionTrigger(input, picker.start, picker.end);
+  const applyScope = (ids: string[]) => {
+    if (!picker || !ids.length) return;
+    setScopeCardIds(ids);
+    // Opening from the scope chip has no @ token to remove.
+    const { text, caret } = picker.start === picker.end
+      ? { text: input, caret: picker.start }
+      : stripMentionTrigger(input, picker.start, picker.end);
     setInput(text);
     setPicker(null);
     requestAnimationFrame(() => {
@@ -250,34 +250,52 @@ export function AssistantPanel({ conv, provider, messages, cards, allMessages, c
       ta?.focus();
       ta?.setSelectionRange(caret, caret);
     });
-  }, [picker, input]);
+  };
 
-  const removeScopeCard = useCallback((cardId: string) => {
-    setScopeCardIds((prev) => prev.filter((id) => id !== cardId));
-  }, []);
+  const selectNode = (id: string, shift: boolean) => {
+    if (!picker) return;
+    const editing = shift || picker.draft !== undefined;
+    const ids = selectMentionBranch(cards, picker.draft ?? scopeCardIds, id, editing);
+    if (editing) {
+      // Reveal descendants even when the parent was found by typing a title.
+      setPicker({ ...picker, query: "", idx: cards.findIndex(card => card.id === id), draft: ids });
+    } else {
+      applyScope(ids);
+    }
+  };
+
+  const editScope = () => {
+    const caret = textareaRef.current?.selectionStart ?? input.length;
+    setPicker({ start: caret, end: caret, ...picker, query: "", idx: 0, draft: [...scopeCardIds] });
+    textareaRef.current?.focus();
+  };
 
   // 输入变化：检测光标前刚输入的 @（前一个字符为空格或行首，或为首个字符）
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const v = e.target.value;
     setInput(v);
     const trigger = mentionAtCaret(v, e.target.selectionStart);
-    setPicker(trigger && { ...trigger, idx: 0 });
+    setPicker(previous => trigger && { ...trigger, idx: 0, draft: previous?.draft });
   }, []);
 
-  const handlePickerKey = useCallback((e: React.KeyboardEvent) => {
+  const handlePickerKey = (e: React.KeyboardEvent) => {
     if (!picker || e.nativeEvent.isComposing) return;
     if (e.key === "ArrowDown") { e.preventDefault(); setPicker((p) => p ? { ...p, idx: Math.max(0, Math.min(pickerCards.length - 1, p.idx + 1)) } : p); }
     else if (e.key === "ArrowUp") { e.preventDefault(); setPicker((p) => p ? { ...p, idx: Math.max(0, p.idx - 1) } : p); }
-    else if (e.key === "Enter") { e.preventDefault(); const c = pickerCards[picker.idx]; if (c) addScopeCard(c.id); }
+    else if (e.key === "Enter") { e.preventDefault(); const c = pickerCards[picker.idx]; if (c) selectNode(c.id, e.shiftKey); }
     else if (e.key === "Escape") { e.preventDefault(); setPicker(null); }
-  }, [picker, pickerCards, addScopeCard]);
+    else if (e.key === "Tab" && !e.shiftKey && picker.draft) {
+      e.preventDefault();
+      document.querySelector<HTMLButtonElement>(".mention-picker .mention-done:enabled, .mention-picker .mention-cancel")?.focus();
+    }
+  };
 
-  // Backspace 在输入框空且无 picker 时，删除最后一个 scope chip
+  // Backspace 在输入框空且无 picker 时，移除范围标签
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (picker) { handlePickerKey(e); return; }
     if (e.key === "Backspace" && input === "" && scopeCardIds.length > 0) {
       e.preventDefault();
-      setScopeCardIds((prev) => prev.slice(0, -1));
+      setScopeCardIds([]);
       return;
     }
     if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
@@ -287,7 +305,7 @@ export function AssistantPanel({ conv, provider, messages, cards, allMessages, c
   };
 
   const handleSend = async () => {
-    if (!input.trim() || loading) return;
+    if (!input.trim() || loading || picker?.draft) return;
     const question = input.trim();
     const quote = pendingQuote;
     const scope = scopeCardIds.length ? [...scopeCardIds] : null;
@@ -371,10 +389,11 @@ export function AssistantPanel({ conv, provider, messages, cards, allMessages, c
               {sendError && <div role="alert" className="status-row">{sendError}{reconnect && <button onClick={()=>connectRun(reconnect.id,reconnect.threadId)}>重新连接</button>}</div>}
               {loading && sendingThread === currentThreadId && <div className="status-row"><span>{statusText}</span><button className="stop" onClick={handleStop} title="中断生成">停止</button></div>}
             </div>
-            {shownPicker && <MentionGraph cards={cards} selected={scopeCardIds} query={shownPicker.query}
+            {shownPicker && <MentionGraph cards={cards} selected={shownPicker.draft ?? scopeCardIds}
+              editing={shownPicker.draft !== undefined} onEdit={editScope} onApply={() => applyScope(picker?.draft ?? [])}
               matches={pickerCards} activeIndex={shownPicker.idx} closing={!picker || closing}
               onHighlight={idx => setPicker(p => p && p.idx !== idx ? { ...p, idx } : p)}
-              onClose={() => { setPicker(null); textareaRef.current?.focus(); }} onSelect={addScopeCard} />}
+              onClose={() => { setPicker(null); textareaRef.current?.focus(); }} onSelect={selectNode} />}
           </div>
           <div className="card-composer">
             {pendingQuote && (
@@ -385,15 +404,12 @@ export function AssistantPanel({ conv, provider, messages, cards, allMessages, c
             )}
             {scopeCardIds.length > 0 && (
               <div className="scope-chips" role="group" aria-label="已限定检索范围的卡片">
-                {scopeCardIds.map((id) => {
-                  const c = cards.find((x) => x.id === id);
-                  return (
-                    <span key={id} className="scope-chip" title={c?.title || "卡片"}>
-                      <span className="scope-chip-label">@{c?.title || "卡片"}</span>
-                      <button type="button" className="scope-chip-remove" aria-label="移除该卡片作用域" onClick={() => removeScopeCard(id)}>×</button>
-                    </span>
-                  );
-                })}
+                <span className="scope-chip">
+                  <button type="button" className="scope-chip-label" onClick={editScope} title="编辑引用范围">
+                    @{cards.find(card => card.id === scopeCardIds[0])?.title || "卡片"}{scopeCardIds.length > 1 && ` 等 ${scopeCardIds.length} 个节点`}
+                  </button>
+                  <button type="button" className="scope-chip-remove" aria-label="移除引用范围" onClick={() => setScopeCardIds([])}>×</button>
+                </span>
               </div>
             )}
             <textarea
@@ -412,7 +428,7 @@ export function AssistantPanel({ conv, provider, messages, cards, allMessages, c
             />
             <div className="composer-bottom">
               <span>仅把该会话的内容作为知识库</span>
-              <Tooltip content="提问"><Button variant="primary" className="send-btn" icon="arrowUp" aria-label="提问" onClick={handleSend} disabled={!input.trim() || loading} /></Tooltip>
+              <Tooltip content="提问"><Button variant="primary" className="send-btn" icon="arrowUp" aria-label="提问" onClick={handleSend} disabled={!input.trim() || loading || !!picker?.draft} /></Tooltip>
             </div>
           </div>
         </>
@@ -464,12 +480,7 @@ const AssistantMessageView = React.memo(function AssistantMessageView({ message,
             <div className="msg-quote"><small>引用原文</small>{message.quote}</div>
           )}
           {message.scope_card_ids && message.scope_card_ids.length > 0 && (
-            <div className="scope-chips scope-chips--readonly" aria-label="提问作用域">
-              {message.scope_card_ids.map((id) => {
-                const c = cards.find((x) => x.id === id);
-                return <span key={id} className="scope-chip" title={c?.title || "卡片"}>@{c?.title || "卡片"}</span>;
-              })}
-            </div>
+            <SentScope ids={message.scope_card_ids} cards={cards} />
           )}
           {message.content}
         </div>
@@ -496,6 +507,15 @@ const AssistantMessageView = React.memo(function AssistantMessageView({ message,
     </div>
   );
 });
+
+function SentScope({ ids, cards }: { ids: string[]; cards: Card[] }) {
+  const titles = new Map(cards.map(card => [card.id, card.title]));
+  const chips = <div className="scope-chips scope-chips--readonly" aria-label="提问作用域">
+    {ids.map(id => <span key={id} className="scope-chip">@{titles.get(id) || "卡片"}</span>)}
+  </div>;
+  if (ids.length <= 3) return chips;
+  return <details className="scope-history"><summary>引用了 {ids.length} 个节点</summary>{chips}</details>;
+}
 
 // 证据徽章 + 浮窗：复用 .cite-badge/.cite-popover 样式，把 [N] 角标转成带卡片信息的可点击徽章
 function EvidenceBadge({ messageId, content, evidence, cards, allMessages, onGoToMessage, html, contentRef }: {

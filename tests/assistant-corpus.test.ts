@@ -120,6 +120,17 @@ describe("全量语料请求", () => {
     expect(built!.evidence).toEqual(corpus.evidence);
   });
 
+  it("选中子树超过预算时回退检索，避免只把前几张卡当作全部资料", () => {
+    const { conv, main } = setup();
+    const sub = branch(conv.id, main.id, "后一个节点");
+    msg(main.id, conv.id, "user", "父卡片的问题");
+    msg(sub.id, conv.id, "assistant", "子卡片的较长回答。".repeat(500));
+    const corpus = corpusMod.buildConversationCorpus(conv.id, [main.id, sub.id], 180);
+    expect(corpus.truncated).toBe(true);
+    expect(corpus.evidence.map(e => e.card_id)).toEqual([main.id]);
+    expect(corpusMod.buildCorpusRequest("比较父子节点", [], corpus, 32000)).toBeNull();
+  });
+
   it("窗口不足时返回 null，交给调用方退回检索", () => {
     const { conv, main } = setup();
     msg(main.id, conv.id, "assistant", "长内容。".repeat(2000));

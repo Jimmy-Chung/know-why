@@ -76,10 +76,23 @@
 }
 .mention-node span, .mention-status > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mention-node .ui-icon { width: 12px; height: 12px; }
-.mention-node[aria-selected="true"], .mention-node:hover:enabled { border-color: var(--accent); background: var(--soft); color: var(--accent); }
-.mention-node.used { opacity: 1; color: var(--accent); border-style: dashed; }
+.mention-node.used, .mention-node:hover:enabled { border-color: var(--accent); background: var(--soft); color: var(--accent); }
+.mention-node[data-active="true"] { outline: 2px solid var(--accent); outline-offset: 1px; }
 .mention-node.compact { width: 14px; height: 14px; border-radius: 50%; padding: 0; }
 .mention-node.compact span { display: none; }
-.mention-node.compact[aria-selected="true"] { background: var(--accent); box-shadow: var(--focus-ring); }
+.mention-node.compact.used { background: var(--accent); }
 .mention-status { border-top: 1px solid var(--border); justify-content: space-between; font-size: var(--text-xs); color: var(--accent); }
 .mention-status small { flex-shrink: 0; }
+
+.mention-help-toggle { display: grid; place-items: center; min-width: 24px; min-height: 28px; padding: 0; color: var(--muted); font-weight: 600; }
+.mention-help-toggle span { display: grid; place-items: center; width: 15px; height: 15px; border: 1px solid currentColor; border-radius: 50%; font-size: 11px; line-height: 1; }
+.mention-help-toggle:hover, .mention-help-toggle[aria-expanded="true"] { color: var(--accent); background: var(--soft); border-radius: var(--radius-sm); }
+.mention-help { margin: 0; padding: var(--space-2) var(--space-3); background: var(--soft); color: var(--text); font-size: var(--text-xs); }
+.mention-edit-actions { display: flex; align-items: center; gap: var(--space-1); flex-shrink: 0; }
+.mention-edit-actions button { border-radius: var(--radius-sm); padding: 4px 10px; font-size: var(--text-xs); }
+.mention-done { background: var(--button); color: var(--button-text); }
+.mention-cancel { color: var(--muted); }
+.scope-chip button.scope-chip-label { min-width: 0; padding: 0; color: inherit; white-space: nowrap; }
+.scope-history { font-size: var(--text-xs); color: var(--accent); margin-bottom: var(--space-1); }
+.scope-history summary { cursor: pointer; }
+.scope-history .scope-chips { max-height: 8rem; overflow: auto; padding-block: var(--space-1); }
