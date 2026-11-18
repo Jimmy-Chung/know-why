@@ -1,6 +1,6 @@
 {
   "name": "know-why",
-  "version": "1.20.0",
+  "version": "1.21.0",
   "private": true,
   "description": "know why — 在对话中沿术语分支追问，随时回到原来的思路。",
   "type": "module",
@@ -49,5 +49,6 @@
     "typescript": "^5.5.4",
     "vite": "^5.4.0",
     "vitest": "^2.1.0"
-  }
+  },
+  "license": "MIT"
 }
