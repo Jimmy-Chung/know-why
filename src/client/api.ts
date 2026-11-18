@@ -189,7 +189,6 @@ export const api = {
     fetch(`${BASE}/notes/batch-delete`, { method: "POST", headers: ct(), body: JSON.stringify({ ids }) }).then(j<{ ok: boolean; deleted: number }>),
 
   // Backup
-  backup: () => fetch(`${BASE}/backup`, { method: "POST" }).then(j<{ ok: boolean; file: string }>),
 };
 
 function ct() {
