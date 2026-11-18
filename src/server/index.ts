@@ -1,4 +1,4 @@
-import { getModelCatalog, invalidateModelCache, reasoningProtocol, reasoningRequest } from "./model-capabilities.js";
+import { getModelCatalog, invalidateModelCache, probeProvider, reasoningProtocol, reasoningRequest } from "./model-capabilities.js";
 import { normalizeThinkMode } from "../shared/reasoning.js";
 // Know Know 本地服务入口。
 // 只监听回环地址；校验请求来源；不含登录模块。
@@ -25,7 +25,7 @@ import {
   startRunWatchdog,
 } from "./orchestrator.js";
 import { defaultCapabilities, createAdapter } from "./adapters/index.js";
-import { setSecret, deleteSecret, maskSecret } from "./secret.js";
+import { setSecret, getSecret, deleteSecret, maskSecret } from "./secret.js";
 import { resolveAnchor, markdownToPlaintext, locateAnchor } from "./selection.js";
 import { buildBranchSnapshot, buildContext, assistantSystemPrompt } from "./context.js";
 import { indexConversation, indexEmbeddings, searchInSession, upsertTopic } from "./knowledge.js";
@@ -154,6 +154,32 @@ app.post("/api/providers/:id/test", async (c) => {
   const adapter = await createAdapter(p);
   const r = await adapter.testConnection();
   return c.json(r);
+});
+
+// 保存前的连接验证：只读取 /models，不落库、不记录密钥、不发起付费对话。
+app.post("/api/providers/verify", async (c) => {
+  const body = await c.req.json().catch(() => ({}));
+  const type = body?.type;
+  if (!["openai", "deepseek", "openrouter", "custom"].includes(type)) {
+    return c.json({ ok: false, detail: "未知的服务类型" }, 400);
+  }
+  const model = typeof body?.model === "string" ? body.model.trim() : "";
+  if (!model) return c.json({ ok: false, detail: "请填写默认模型" }, 400);
+
+  let apiKey = typeof body?.api_key === "string" ? body.api_key.trim() : "";
+  // 编辑已有 Provider 且未重新输入 Key 时复用已保存的密钥；密钥不返回前端。
+  if (!apiKey && body?.provider_id) {
+    const existing = repo.providers.get(String(body.provider_id));
+    if (existing?.has_secret) apiKey = (await getSecret(existing.secret_ref)) ?? "";
+  }
+
+  const result = await probeProvider({
+    type,
+    apiBase: typeof body?.api_base === "string" ? body.api_base : "",
+    apiKey,
+    model,
+  });
+  return c.json(result);
 });
 
 app.get("/api/providers/:id/models", async (c) => {

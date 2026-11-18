@@ -1,5 +1,5 @@
-import type { ProviderConfig, ThinkMode } from '../shared/types.js';
-import { REASONING_EFFORTS, UNKNOWN_REASONING, normalizeThinkMode, reasoningOptions, type ReasoningCapabilities, type ReasoningEffort, type ModelCatalog } from '../shared/reasoning.js';
+import type { ProviderCapabilities, ProviderConfig, ProviderType, ThinkMode } from '../shared/types.js';
+import { REASONING_EFFORTS, THINK_LABELS, UNKNOWN_REASONING, normalizeThinkMode, reasoningOptions, type ReasoningCapabilities, type ReasoningEffort, type ModelCatalog } from '../shared/reasoning.js';
 import { getSecret } from './secret.js';
 import * as repo from './repo.js';
 
@@ -188,15 +188,27 @@ export async function getModelCatalog(provider: ProviderConfig, model: string, r
     void result.then(r => { if (r.warning && cache.get(key) === entry) entry!.until = Date.now() + 15_000; });
   }
   const { rows, warning } = await entry.result;
+  const catalog = buildCatalog(provider, model, rows, warning);
+  syncProviderCapabilities(provider, catalog);
+  return catalog;
+}
+
+// 由 /models 的行数据构建能力视图。getModelCatalog 与「保存前验证」共用同一套解析。
+function buildCatalog(
+  provider: Pick<ProviderConfig, "type" | "api_base" | "default_model"> & { capabilities?: ProviderCapabilities },
+  model: string,
+  rows: any[],
+  warning?: string,
+): ModelCatalog {
+  const protocol = reasoningProtocol(provider as ProviderConfig);
   const row = rows.find(r => r.id === model) ?? rows.find(r => r.id === resolveModelAlias(model));
-  const protocol = reasoningProtocol(provider);
   // 推理能力：OpenRouter 风格 → DeepSeek effort → 内置规则回退
   const reasoning = parseReasoningMetadata(row) ?? parseEffortMetadata(row) ?? documentedReasoning(protocol, model);
   if (protocol === "openai" && !reasoning.efforts.length) reasoning.canEnable = false;
 
   const limits = parseModelLimits(row);
   const search = resolveSearchCapability(protocol);
-  const catalog: ModelCatalog = {
+  return {
     models: [...new Set([model, provider.default_model, ...rows.map(r => r.id)].filter(Boolean))],
     model,
     reasoning,
@@ -207,8 +219,118 @@ export async function getModelCatalog(provider: ProviderConfig, model: string, r
     forceSearch: search.forceSearch,
     warning,
   };
-  syncProviderCapabilities(provider, catalog);
-  return catalog;
+}
+
+export function capabilitiesFromCatalog(catalog: ModelCatalog): ProviderCapabilities {
+  return {
+    web_search: catalog.webSearch,
+    thinking: catalog.reasoning.status === "supported",
+    tool_calls: catalog.webSearch,
+    force_search: catalog.forceSearch,
+    models: [],
+    context_window: catalog.contextWindow,
+  };
+}
+
+export interface ProbeResult {
+  ok: boolean;
+  detail: string;
+  errorKind?: "auth" | "unreachable" | "model" | "capability" | "unknown";
+  catalog?: ModelCatalog;
+  capabilities?: ProviderCapabilities;
+  resolvedModel?: string;
+  availableModels?: string[];
+}
+
+function officialBase(type: ProviderType): string {
+  if (type === "openai") return "https://api.openai.com/v1";
+  if (type === "deepseek") return "https://api.deepseek.com/v1";
+  if (type === "openrouter") return "https://openrouter.ai/api/v1";
+  return "";
+}
+
+export function describeCatalog(catalog: ModelCatalog, resolvedModel: string): string {
+  const parts = [`连接成功 · ${resolvedModel}`];
+  parts.push(`上下文 ${catalog.contextWindow.toLocaleString()} tokens`);
+  if (catalog.maxOutputTokens) parts.push(`输出上限 ${catalog.maxOutputTokens.toLocaleString()}`);
+  if (catalog.reasoning.status === "supported") {
+    parts.push(
+      catalog.reasoning.efforts.length
+        ? `推理 ${catalog.reasoning.efforts.map((e) => THINK_LABELS[e] ?? e).join(" / ")}`
+        : "支持思考开关",
+    );
+  } else {
+    parts.push("无可调推理");
+  }
+  parts.push(catalog.webSearch ? (catalog.forceSearch ? "原生联网（可强制）" : "原生联网") : "无原生联网");
+  return parts.join(" · ");
+}
+
+// 保存 Provider 前的验证：只读取 /models，不落库、不记录密钥、不发起付费对话。
+export async function probeProvider(input: {
+  type: ProviderType;
+  apiBase?: string;
+  apiKey?: string;
+  model: string;
+}): Promise<ProbeResult> {
+  const base = (input.apiBase || officialBase(input.type)).replace(/\/+$/, "");
+  if (!base) return { ok: false, detail: "请填写接口地址", errorKind: "unreachable" };
+  if (!input.apiKey && input.type !== "custom") {
+    return { ok: false, detail: "请填写 API Key", errorKind: "auth" };
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(`${base}/models`, {
+      headers: input.apiKey ? { Authorization: `Bearer ${input.apiKey}` } : {},
+      signal: AbortSignal.timeout(10000),
+      redirect: "error",
+    });
+  } catch (e) {
+    return { ok: false, detail: `网络不可达：${(e as Error).message}`, errorKind: "unreachable" };
+  }
+  if (response.status === 401 || response.status === 403) {
+    return { ok: false, detail: "鉴权失败：API Key 无效或无权限", errorKind: "auth" };
+  }
+  if (response.status === 404) {
+    return { ok: false, detail: "接口不可达：地址不存在（检查是否缺少 /v1 等路径）", errorKind: "unreachable" };
+  }
+  if (!response.ok) {
+    return { ok: false, detail: `接口返回 HTTP ${response.status}`, errorKind: "unreachable" };
+  }
+  const body: any = await response.json().catch(() => null);
+  if (!body || !Array.isArray(body.data)) {
+    return { ok: false, detail: "接口返回格式不兼容：缺少模型列表", errorKind: "capability" };
+  }
+  const rows = body.data.filter((r: any) => typeof r?.id === "string");
+  if (!rows.length) {
+    return { ok: false, detail: "接口可达，但未返回任何模型", errorKind: "model" };
+  }
+
+  const protocol = reasoningProtocol({ type: input.type, api_base: base } as ProviderConfig);
+  const matched = rows.find((r: any) => r.id === input.model) ?? rows.find((r: any) => r.id === resolveModelAlias(input.model));
+  const availableModels = rows.slice(0, 8).map((r: any) => r.id);
+  if (!matched && protocol !== "custom") {
+    return {
+      ok: false,
+      detail: `模型「${input.model}」不在该接口的模型列表中`,
+      errorKind: "model",
+      availableModels,
+    };
+  }
+
+  const catalog = buildCatalog({ type: input.type, api_base: base, capabilities: undefined, default_model: input.model }, input.model, rows);
+  if (!matched) {
+    catalog.warning = `接口未列出该模型（共 ${rows.length} 个），按兼容接口处理。`;
+  }
+  return {
+    ok: true,
+    detail: describeCatalog(catalog, matched?.id ?? input.model),
+    catalog,
+    capabilities: capabilitiesFromCatalog(catalog),
+    resolvedModel: matched?.id ?? input.model,
+    availableModels,
+  };
 }
 
 export function reasoningRequest(mode: ThinkMode, cap: ReasoningCapabilities, protocol: string, responses = false): Record<string, unknown> {
