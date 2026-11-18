@@ -21,7 +21,8 @@ import { TreePanel } from "./TreePanel.js";
 import { isCrossBranchReference, REFERENCE_TRACE_MS, type SelectCard, type TreeReference } from "../tree-reference.js";
 import { AssistantPanel } from "./AssistantPanel.js";
 import { usePanelPresence } from "../usePanelPresence.js";
-import { NoteListGrid, NoteEditorDialog, type NoteEditorTarget } from "./Notes.js";
+import { NoteEditorDialog, NoteListGrid, type NoteEditorTarget } from "./Notes.js";
+import { NOTES_ENABLED } from "../../shared/features.js";
 
 interface WorkspaceProps {
   conv: Conversation;
@@ -252,10 +253,12 @@ export function Workspace(props: WorkspaceProps) {
             <Button className="knowledge-btn" onClick={props.onToggleAssistant} icon="assistant" aria-label="会话知识助手">助手</Button>
           )}
         </div>
-        <div className="ws-tabs" role="tablist" aria-label="会话内容 Tab">
-          <button role="tab" aria-selected={props.activeTab === "chat"} className={props.activeTab === "chat" ? "ws-tab selected" : "ws-tab"} onClick={() => props.onSetTab("chat")}>对话卡片</button>
-          <button role="tab" aria-selected={props.activeTab === "notes"} className={props.activeTab === "notes" ? "ws-tab selected" : "ws-tab"} onClick={() => props.onSetTab("notes")}>用户笔记</button>
-        </div>
+        {NOTES_ENABLED && (
+          <div className="ws-tabs" role="tablist" aria-label="会话内容 Tab">
+            <button role="tab" aria-selected={props.activeTab === "chat"} className={props.activeTab === "chat" ? "ws-tab selected" : "ws-tab"} onClick={() => props.onSetTab("chat")}>对话卡片</button>
+            <button role="tab" aria-selected={props.activeTab === "notes"} className={props.activeTab === "notes" ? "ws-tab selected" : "ws-tab"} onClick={() => props.onSetTab("notes")}>用户笔记</button>
+          </div>
+        )}
         <div className={`content${props.activeTab === "notes" ? " content--notes" : ""}`}>
           <div className="chat-pane" hidden={props.activeTab === "notes"}>
             <div className="main">
@@ -307,15 +310,17 @@ export function Workspace(props: WorkspaceProps) {
             </div>
             <TreePanel key={conv.id} cards={cards} currentCardId={card?.id || null} onSelect={onSelectCard} collapsed={assistantPresent} reference={reference} />
           </div>
-          <div className="notes-pane" hidden={props.activeTab !== "notes"}>
-            <NoteListGrid
-              notes={props.notes}
-              onNew={() => props.onNewNote("")}
-              onOpen={props.onOpenNote}
-              onDelete={props.onDeleteNote}
-              onDeleteMany={props.onDeleteNotes}
-            />
-          </div>
+          {NOTES_ENABLED && (
+            <div className="notes-pane" hidden={props.activeTab !== "notes"}>
+              <NoteListGrid
+                notes={props.notes}
+                onNew={() => props.onNewNote("")}
+                onOpen={props.onOpenNote}
+                onDelete={props.onDeleteNote}
+                onDeleteMany={props.onDeleteNotes}
+              />
+            </div>
+          )}
         </div>
       </div>
       {props.assistantOpen && <div className="assistant-backdrop" onClick={props.onToggleAssistant} />}
@@ -347,7 +352,7 @@ export function Workspace(props: WorkspaceProps) {
           onGoToCard={(id) => { props.onPreviewCard(null); props.onSetTab("chat"); onSelectCard(id); }}
         />
       )}
-      {props.editingNote && (
+      {NOTES_ENABLED && props.editingNote && (
         <NoteEditorDialog
           key={props.editingNote.editorKey}
           note={props.editingNote}
