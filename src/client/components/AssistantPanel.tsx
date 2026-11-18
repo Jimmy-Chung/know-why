@@ -412,7 +412,7 @@ export function AssistantPanel({ conv, provider, messages, cards, allMessages, c
               onKeyDown={handleKeyDown}
             />
             <div className="composer-bottom">
-              <span>不使用模型外部知识</span>
+              <span>仅把该会话的内容作为知识库</span>
               <Tooltip content="提问"><Button variant="primary" className="send-btn" icon="arrowUp" aria-label="提问" onClick={handleSend} disabled={!input.trim() || loading} /></Tooltip>
             </div>
           </div>
