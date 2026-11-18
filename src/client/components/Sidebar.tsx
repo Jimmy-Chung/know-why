@@ -1,4 +1,5 @@
 import { Icon } from "./ui/Icon.js";
+import brandIcon from "../assets/know-why.png";
 import { Button, IconButton } from "./ui/Button.js";
 import React, { useState } from "react";
 import { Modal } from "@arco-design/web-react";
@@ -46,9 +47,9 @@ export function Sidebar(props: SidebarProps) {
   return (
     <aside className="sidebar" id="session-navigation" aria-hidden={props.collapsed || undefined} {...{ inert: props.collapsed ? "" : undefined }} aria-label="会话导航">
       <div className="brand">
-        <span className="brand-logo"><Icon name="leaf" /></span>
+        <img className="brand-logo" src={brandIcon} width={32} height={32} alt="" />
         <span>
-          know why
+          <span className="brand-wordmark">know why</span>
           <small>沿着术语，继续追问。</small>
         </span>
       </div>
