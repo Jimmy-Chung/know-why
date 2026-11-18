@@ -6,6 +6,7 @@ import { CopyButton } from "./ui/CopyButton.js";
 import React, { useState, useRef, useEffect, useMemo, useLayoutEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { renderMarkdown, markdownToPlainText } from "../markdown.js";
+import { stripMentionTrigger } from "../mention.js";
 import type { Conversation, ProviderConfig, KnowledgeAssistantMessage, Card, Message, SSEEvent } from "../../shared/types.js";
 import { api } from "../api.js";
 
@@ -53,7 +54,7 @@ export function AssistantPanel({ conv, provider, messages, cards, allMessages, c
   // @ 作用域：用户可选若干卡片，本次提问的检索只在这些卡范围内进行
   const [scopeCardIds, setScopeCardIds] = useState<string[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [picker, setPicker] = useState<{ query: string; idx: number; rect: DOMRect } | null>(null);
+  const [picker, setPicker] = useState<{ query: string; idx: number; rect: DOMRect; start: number; end: number } | null>(null);
 
   // 拖拽左边缘调整宽度
   const startResize = (e: React.MouseEvent) => {
@@ -232,13 +233,23 @@ export function AssistantPanel({ conv, provider, messages, cards, allMessages, c
 
   const addScopeCard = useCallback((cardId: string) => {
     setScopeCardIds((prev) => (prev.includes(cardId) ? prev : [...prev, cardId]));
+    // 选中候选后把输入框里的 "@查询词" 摘掉，只保留已选卡片 chip
+    if (picker) {
+      const { text, caret } = stripMentionTrigger(input, picker.start, picker.end);
+      setInput(text);
+      setPicker(null);
+      requestAnimationFrame(() => {
+        const ta = textareaRef.current;
+        if (ta) { ta.focus(); ta.setSelectionRange(caret, caret); }
+      });
+      return;
+    }
     setPicker(null);
-    // 焦点回到输入框末尾
     requestAnimationFrame(() => {
       const ta = textareaRef.current;
       if (ta) { ta.focus(); const end = ta.value.length; ta.setSelectionRange(end, end); }
     });
-  }, []);
+  }, [picker, input]);
 
   const removeScopeCard = useCallback((cardId: string) => {
     setScopeCardIds((prev) => prev.filter((id) => id !== cardId));
@@ -260,7 +271,7 @@ export function AssistantPanel({ conv, provider, messages, cards, allMessages, c
       // 输入了 @ 且其后到光标无空白 → 打开 picker；否则关闭
       if (atBoundary && !/\s/.test(segment) && segment.length <= 40) {
         const rect = ta.getBoundingClientRect();
-        setPicker({ query: segment, idx: 0, rect });
+        setPicker({ query: segment, idx: 0, rect, start: atIdx, end: pos });
         return;
       }
     }
