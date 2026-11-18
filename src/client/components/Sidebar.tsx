@@ -118,14 +118,6 @@ export function Sidebar(props: SidebarProps) {
           )}
         </div>
         <Button variant="ghost" className="add-provider" onClick={onOpenSettings} icon="settings">管理模型服务</Button>
-        <div className="profile">
-          <span><Icon name="leaf" /></span>
-          <div>
-            我的知识空间
-            <br />
-            <small>个人空间</small>
-          </div>
-        </div>
       </div>
     </aside>
   );
