@@ -9,7 +9,7 @@ interface SettingsModalProps {
   onSaved: () => Promise<void>;
 }
 
-type Tab = "provider" | "search";
+type Tab = "provider" | "data";
 
 export function SettingsModal({ providers, onClose, onSaved }: SettingsModalProps) {
   const [tab, setTab] = useState<Tab>("provider");
@@ -62,10 +62,6 @@ export function SettingsModal({ providers, onClose, onSaved }: SettingsModalProp
     clearNote();
   };
 
-  // 搜索表单
-  const [sBase, setSBase] = useState("https://api.tavily.com");
-  const [sKey, setSKey] = useState("");
-  const [sEnabled, setSEnabled] = useState(true);
   const [backupFile, setBackupFile] = useState("");
 
   const showNote = (text: string, kind: "ok" | "err") => setNote({ text, kind });
@@ -152,34 +148,6 @@ export function SettingsModal({ providers, onClose, onSaved }: SettingsModalProp
     }
   };
 
-  // 测试搜索
-  const testSearch = async () => {
-    clearNote();
-    setNote({ text: "测试中…", kind: "" });
-    try {
-      if (sKey.trim()) {
-        await api.setSearchSecret(sKey);
-      }
-      const r = await api.testSearch();
-      if (r.ok) showNote(r.detail, "ok");
-      else showNote(r.detail, "err");
-    } catch (e) {
-      showNote((e as Error).message, "err");
-    }
-  };
-
-  // 保存搜索配置
-  const saveSearch = async () => {
-    clearNote();
-    try {
-      await api.setSearch({ api_base: sBase, has_secret: !!sKey.trim(), enabled: sEnabled });
-      if (sKey.trim()) await api.setSearchSecret(sKey);
-      showNote("独立搜索配置已保存", "ok");
-    } catch (e) {
-      showNote((e as Error).message, "err");
-    }
-  };
-
   // 备份
   const doBackup = async () => {
     clearNote();
@@ -219,14 +187,14 @@ export function SettingsModal({ providers, onClose, onSaved }: SettingsModalProp
           <h2>设置</h2>
           <IconButton onClick={onClose} icon="close" label="关闭设置" />
         </div>
-        <p>配置模型服务与独立搜索。API Key 由本地服务安全保存，不进入导出文件或日志。</p>
+        <p>配置模型服务。API Key 由本地服务安全保存，不进入导出文件或日志。</p>
 
         <div className="settings-tabs">
           <button className={tab === "provider" ? "selected" : ""} onClick={() => { setTab("provider"); clearNote(); }}>
             Provider 管理
           </button>
-          <button className={tab === "search" ? "selected" : ""} onClick={() => { setTab("search"); clearNote(); }}>
-            独立搜索与备份
+          <button className={tab === "data" ? "selected" : ""} onClick={() => { setTab("data"); clearNote(); }}>
+            数据与备份
           </button>
         </div>
 
@@ -299,35 +267,8 @@ export function SettingsModal({ providers, onClose, onSaved }: SettingsModalProp
           </div>
         )}
 
-        {tab === "search" && (
+        {tab === "data" && (
           <div>
-            <p className="settings-description">
-              独立搜索为没有原生搜索能力的兼容模型提供联网资料，结果交回当前会话模型回答。
-              凭据与聊天 Provider 分开管理，不改变会话已锁定的模型。首版接入 Tavily。
-            </p>
-            <label className="field">
-              搜索服务
-              <select disabled>
-                <option value="tavily">Tavily</option>
-              </select>
-            </label>
-            <label className="field">
-              API 地址
-              <input value={sBase} onChange={(e) => setSBase(e.target.value)} placeholder="https://api.tavily.com" />
-            </label>
-            <label className="field">
-              API Key
-              <input type="password" value={sKey} onChange={(e) => setSKey(e.target.value)} placeholder="tvly-..." />
-            </label>
-            <div className="checkbox-row">
-              <input type="checkbox" id="senabled" checked={sEnabled} onChange={(e) => setSEnabled(e.target.checked)} />
-              <label htmlFor="senabled">启用独立搜索</label>
-            </div>
-            <div className="settings-actions">
-              <button className="test" onClick={testSearch}>测试连接</button>
-              <button className="save" onClick={saveSearch}>保存搜索配置</button>
-            </div>
-
             <div className="settings-section-title">备份与导出</div>
             <p className="settings-description">
               备份为本机 SQLite 副本；导出为结构化 JSON（不含明文密钥）。密钥需单独配置。

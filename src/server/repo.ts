@@ -5,7 +5,6 @@ import type {
   ProviderConfig,
   ProviderCapabilities,
   ProviderType,
-  SearchConfig,
   Conversation,
   Card,
   Message,
@@ -162,45 +161,6 @@ export const providers = {
       .prepare("SELECT * FROM provider_config WHERE disabled=0 ORDER BY created_at LIMIT 1")
       .get() as Row | undefined;
     return any ? rowToProvider(any) : null;
-  },
-};
-
-export const search = {
-  get(): SearchConfig | null {
-    const r = getDb()
-      .prepare("SELECT * FROM search_config WHERE enabled=1 ORDER BY created_at LIMIT 1")
-      .get() as Row | undefined;
-    if (!r) return null;
-    return {
-      id: r.id,
-      provider: r.provider,
-      api_base: r.api_base,
-      config_version: r.config_version,
-      has_secret: !!r.has_secret,
-      enabled: !!r.enabled,
-      secret_ref: r.secret_ref,
-      created_at: r.created_at,
-      updated_at: r.updated_at,
-    };
-  },
-  upsert(input: { provider: "tavily"; api_base: string; has_secret: boolean; secret_ref: string; enabled: boolean }): SearchConfig {
-    const now = new Date().toISOString();
-    const cur = getDb().prepare("SELECT * FROM search_config LIMIT 1").get() as Row | undefined;
-    if (cur) {
-      getDb()
-        .prepare(
-          "UPDATE search_config SET provider=?,api_base=?,has_secret=?,secret_ref=?,enabled=?,config_version=config_version+1,updated_at=? WHERE id=?",
-        )
-        .run(input.provider, input.api_base, input.has_secret ? 1 : 0, input.secret_ref, input.enabled ? 1 : 0, now, cur.id);
-      return this.get()!;
-    }
-    const id = ulid();
-    getDb()
-      .prepare(
-        "INSERT INTO search_config (id,provider,api_base,config_version,secret_ref,has_secret,enabled,created_at,updated_at) VALUES (?,?,?,1,?,?,?, ?,?)",
-      )
-      .run(id, input.provider, input.api_base, input.secret_ref, input.has_secret ? 1 : 0, input.enabled ? 1 : 0, now, now);
-    return this.get()!;
   },
 };
 

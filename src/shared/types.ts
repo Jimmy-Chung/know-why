@@ -50,18 +50,6 @@ export interface ProviderCapabilities {
   context_window: number; // 估算上下文窗口（token）
 }
 
-export interface SearchConfig {
-  id: string;
-  provider: "tavily" | "none";
-  api_base: string;
-  config_version: number;
-  has_secret: boolean;
-  enabled: boolean;
-  created_at: string;
-  updated_at: string;
-  secret_ref: string;
-}
-
 export interface Conversation {
   id: string;
   title: string;

@@ -13,7 +13,6 @@
 - 存储：SQLite（WAL，外键开启）+ better-sqlite3
 - 凭据：macOS Keychain（keytar）为主，AES-256-GCM 加密文件回退
 - 检索：SQLite FTS5 + 中文双字组分词
-- 独立搜索：Tavily（与聊天 Provider 解耦）
 
 ## 环境要求
 
@@ -34,7 +33,6 @@ npm install
 首次使用前，在应用内「设置」页填入：
 
 1. **Provider**（OpenAI / DeepSeek / 自定义兼容接口）：填入 API Base、默认模型、API Key。
-2. **独立搜索**（Tavily）：填入 Tavily API Key（仅联网模式用到）。
 
 凭据仅保存在本机 Keychain（或加密文件），不进入浏览器、日志与导出文件。接口返回时仅返回掩码与「是否已配置」状态。
 
@@ -107,7 +105,7 @@ PORT=5180 npm start   # 自定义端口
 
 - 自动化测试：`npm test`（覆盖上下文构建、分支隔离、幂等性、选区锚点、摘要预算估算）。
 - 端到端冒烟：受控 mock 模型服务验证 SSE 全链路（run→message→delta→done）、探索分支、知识助手检索、备份导出。
-- 真实联调：待用户填入真实 Provider Key 与 Tavily Key 后执行（见已知问题）。
+- 真实联调：待用户填入真实 Provider Key 后执行（见已知问题）。
 
 ## 已知问题
 
