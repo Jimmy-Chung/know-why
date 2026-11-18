@@ -8,7 +8,7 @@ import { createPortal } from "react-dom";
 import { renderMarkdown, markdownToPlainText } from "../markdown.js";
 import { MentionGraph } from "./MentionGraph.js";
 import { useExitValue } from "../usePanelPresence.js";
-import { mentionAtCaret, selectMentionBranch, stripMentionTrigger } from "../mention.js";
+import { mentionAtCaret, selectMentionNodes, stripMentionTrigger } from "../mention.js";
 import type { Conversation, ProviderConfig, KnowledgeAssistantMessage, Card, Message, SSEEvent } from "../../shared/types.js";
 import { api } from "../api.js";
 
@@ -254,8 +254,8 @@ export function AssistantPanel({ conv, provider, messages, cards, allMessages, c
 
   const selectNode = (id: string, shift: boolean) => {
     if (!picker) return;
-    const editing = shift || picker.draft !== undefined;
-    const ids = selectMentionBranch(cards, picker.draft ?? scopeCardIds, id, editing);
+    const editing = picker.draft !== undefined;
+    const ids = selectMentionNodes(cards, picker.draft ?? scopeCardIds, id, { scope: shift ? "node" : "branch", toggle: editing });
     if (editing) {
       // Reveal descendants even when the parent was found by typing a title.
       setPicker({ ...picker, query: "", idx: cards.findIndex(card => card.id === id), draft: ids });

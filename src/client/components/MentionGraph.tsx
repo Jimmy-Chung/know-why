@@ -71,7 +71,7 @@ export function MentionGraph({ cards, selected, matches, activeIndex, closing, e
         </div>
       </header>
       {showHelp && <p id="mention-help" className="mention-help">
-        单击节点会引用它和所有后代。按住 Shift 点击节点，或点「自选」，可以调整范围。点已勾选的节点会排除整条分支。想保留其中某个子分支，点它就能加回。点「完成」保存。
+        点击节点会引用它和所有后代。Shift + 点击只引用当前节点。用键盘选择时，回车引用整条分支，Shift + 回车只引用当前节点。「自选」中再次选择可移除相应范围，点「完成」保存。
       </p>}
       <div className="mention-viewport" ref={frame}>
         <div id="mention-options" role="listbox" aria-multiselectable="true" aria-label="可引用的会话卡片" className="mention-canvas" style={{ width, height }}>

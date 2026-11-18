@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mentionAtCaret, selectMentionBranch, stripMentionTrigger } from "../src/client/mention.js";
+import { mentionAtCaret, selectMentionNodes, stripMentionTrigger } from "../src/client/mention.js";
 
 describe("stripMentionTrigger", () => {
   it("删除行首的 @ 触发文本", () => {
@@ -34,20 +34,35 @@ describe("节点图引用范围", () => {
   ];
 
   it("默认选中整条分支，合并重叠选择并保留原先的选择", () => {
-    const selected = selectMentionBranch(cards, ["other", "leaf"], "first", false);
+    const selected = selectMentionNodes(cards, ["other", "leaf"], "first", { scope: "branch", toggle: false });
     expect(new Set(selected)).toEqual(new Set(["other", "first", "leaf"]));
-    expect(selectMentionBranch(cards, selected, "first", false)).toEqual(selected);
+    expect(selectMentionNodes(cards, selected, "first", { scope: "branch", toggle: false })).toEqual(selected);
     expect(selected).toHaveLength(3);
   });
 
+  it("Shift 选择父节点只追加它自身，重复选择不影响已有引用", () => {
+    const options = { scope: "node", toggle: false } as const;
+    expect(selectMentionNodes(cards, [], "root", options)).toEqual(["root"]);
+    const selected = selectMentionNodes(cards, ["other"], "first", options);
+    expect(selected).toEqual(["other", "first"]);
+    expect(selectMentionNodes(cards, selected, "first", options)).toEqual(selected);
+  });
+
+  it("自选中用 Shift 只切换当前节点，保留已选后代", () => {
+    const options = { scope: "node", toggle: true } as const;
+    const selected = selectMentionNodes(cards, ["leaf"], "first", options);
+    expect(selected).toEqual(["leaf", "first"]);
+    expect(selectMentionNodes(cards, selected, "first", options)).toEqual(["leaf"]);
+  });
+
   it("反选只移除目标子树，可单独加回更深的节点或恢复整条分支", () => {
-    const all = selectMentionBranch(cards, [], "root", true);
-    const trimmed = selectMentionBranch(cards, all, "first", true);
+    const all = selectMentionNodes(cards, [], "root", { scope: "branch", toggle: true });
+    const trimmed = selectMentionNodes(cards, all, "first", { scope: "branch", toggle: true });
     expect(new Set(trimmed)).toEqual(new Set(["root", "second"]));
-    const restoredLeaf = selectMentionBranch(cards, trimmed, "leaf", true);
+    const restoredLeaf = selectMentionNodes(cards, trimmed, "leaf", { scope: "branch", toggle: true });
     expect(new Set(restoredLeaf)).toEqual(new Set(["root", "second", "leaf"]));
-    expect(new Set(selectMentionBranch(cards, restoredLeaf, "first", true))).toEqual(new Set(all));
-    expect(selectMentionBranch(cards, trimmed, "root", true)).toEqual([]);
+    expect(new Set(selectMentionNodes(cards, restoredLeaf, "first", { scope: "branch", toggle: true }))).toEqual(new Set(all));
+    expect(selectMentionNodes(cards, trimmed, "root", { scope: "branch", toggle: true })).toEqual([]);
     expect(all).toHaveLength(4);
   });
 });
