@@ -182,11 +182,12 @@ export function ProviderDialog({ provider, onClose, onSaved }: ProviderDialogPro
           <button className="test" onClick={doVerify} disabled={verify.status === "pending"}>
             {verify.status === "pending" ? "验证中…" : "验证连接"}
           </button>
-          <span />
-          <button onClick={onClose} disabled={saving}>取消</button>
-          <button className="save" onClick={save} disabled={!canSave} title={canSave ? "" : "请先验证连接，通过后才能保存"}>
-            {saving ? "保存中…" : "确定"}
-          </button>
+          <div className="dialog-actions-right">
+            <button onClick={onClose} disabled={saving}>取消</button>
+            <button className="save" onClick={save} disabled={!canSave} title={canSave ? "" : "请先验证连接，通过后才能保存"}>
+              {saving ? "保存中…" : "确定"}
+            </button>
+          </div>
         </div>
         {verify.status !== "idle" && (
           <div className={`settings-note ${verify.status === "ok" ? "ok" : verify.status === "err" ? "err" : ""}`} role="status">
