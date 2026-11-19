@@ -18,39 +18,39 @@
 
 一张卡片开始一段对话。回答和追问都留在这张卡片里，不会散落。
 
-![新建会话并提问](https://cdn.jsdelivr.net/gh/Jimmy-Chung/know-why@main/docs/images/01-chat.jpg)
+![新建会话并提问](https://cdn.jsdelivr.net/gh/Jimmy-Chung/know-why@v1.23.4/docs/images/01-chat.jpg)
 
 ### 2. 选中不熟悉的术语
 
 在回答里选中任意文字，选区旁出现两个动作：**引用**（留在当前卡片继续问）和 **探索**（开一条新分支）。
 
-![选中术语](https://cdn.jsdelivr.net/gh/Jimmy-Chung/know-why@main/docs/images/02-selection.jpg)
+![选中术语](https://cdn.jsdelivr.net/gh/Jimmy-Chung/know-why@v1.23.4/docs/images/02-selection.jpg)
 
 ### 3. 探索出一条分支
 
 点分支图标，会生成一张子卡片，带着选中文字和分叉前的上下文继续解释。原来的卡片和它的其他分支不受影响，右侧节点树同步长出节点。
 
-![探索分支](https://cdn.jsdelivr.net/gh/Jimmy-Chung/know-why@main/docs/images/03-branch.jpg)
+![探索分支](https://cdn.jsdelivr.net/gh/Jimmy-Chung/know-why@v1.23.4/docs/images/03-branch.jpg)
 
 ### 4. 在右侧回顾与查询
 
 打开右侧「会话知识助手」，它只读**当前会话**已经保存的卡片与问答。不限定范围时是全局作用域，答案标注来源卡片。
 
-![会话知识助手](https://cdn.jsdelivr.net/gh/Jimmy-Chung/know-why@main/docs/images/04-assistant.jpg)
+![会话知识助手](https://cdn.jsdelivr.net/gh/Jimmy-Chung/know-why@v1.23.4/docs/images/04-assistant.jpg)
 
 输入 `@` 打开会话节点图。点一个节点会连同它的所有后代一起限定检索范围（按住 <kbd>Shift</kbd> 点击只选当前节点）：
 
-![节点图选择范围](https://cdn.jsdelivr.net/gh/Jimmy-Chung/know-why@main/docs/images/05-scope-graph.jpg)
+![节点图选择范围](https://cdn.jsdelivr.net/gh/Jimmy-Chung/know-why@v1.23.4/docs/images/05-scope-graph.jpg)
 
 限定范围后提问，回答只基于选中的分支：
 
-![限定范围后的回答](https://cdn.jsdelivr.net/gh/Jimmy-Chung/know-why@main/docs/images/06-scope-answer.jpg)
+![限定范围后的回答](https://cdn.jsdelivr.net/gh/Jimmy-Chung/know-why@v1.23.4/docs/images/06-scope-answer.jpg)
 
 ### 5. 点击来源跳回原文
 
 回答里的来源角标可以点击，左侧会跳到对应卡片与消息。
 
-![点击来源跳转](https://cdn.jsdelivr.net/gh/Jimmy-Chung/know-why@main/docs/images/07-jump.gif)
+![点击来源跳转](https://cdn.jsdelivr.net/gh/Jimmy-Chung/know-why@v1.23.4/docs/images/07-jump.gif)
 
 ---
 
