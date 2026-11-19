@@ -5,7 +5,7 @@
 .brand { display: flex; align-items: center; gap: var(--space-3); padding: 0 var(--space-2) var(--space-4); font-size: var(--text-lg); letter-spacing: -.4px; font-weight: 600; }
 .brand-wordmark { display: block; font: 800 20px/1.1 "Martian Mono", monospace; letter-spacing: -.035em; color: var(--text); }
 .brand small { display: block; font-size: var(--text-xs); line-height: 14px; font-weight: 400; margin-top: var(--space-1); letter-spacing: 0; }
-.brand-logo { display: block; flex-shrink: 0; border-radius: 24%; background: #053e30; }
+.brand-logo { display: block; flex-shrink: 0; }
 .new-btn { width: 100%; justify-content: flex-start; box-shadow: var(--shadow-xs); }
 .new-btn:hover { color: var(--accent); }
 .eyebrow { font-size: var(--text-xs); font-weight: 500; color: var(--muted); margin: var(--space-2) var(--space-2) 0; display: flex; justify-content: space-between; align-items: center; }
