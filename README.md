@@ -1,10 +1,14 @@
 <p align="center">
   <img src="https://cdn.jsdelivr.net/gh/Jimmy-Chung/know-why@v1.23.2/src/client/assets/know-why.png" width="80" alt="know why" />
 </p>
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://cdn.jsdelivr.net/gh/Jimmy-Chung/know-why@v1.23.3/docs/images/know-why-wordmark-dark.png" />
+    <img src="https://cdn.jsdelivr.net/gh/Jimmy-Chung/know-why@v1.23.3/docs/images/know-why-wordmark.png" width="360" alt="know why" />
+  </picture>
+</p>
 
-<h1 align="center">know why</h1>
-
-<p align="center">在大模型对话里，顺着术语不断分支追问，把一个问题真正挖透，再随时回到原来的思路。</p>
+<p align="center">在跟 AI 的对话中，可以随时随地对其中的概念/术语进行深度探索，又可以随时随地回到原来的思路。</p>
 
 ---
 
