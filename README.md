@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://cdn.jsdelivr.net/gh/Jimmy-Chung/know-why@v1.22.3/src/client/assets/know-why.png" width="80" alt="know why" />
+  <img src="./src/client/assets/know-why.png" width="80" alt="know why" />
 </p>
 
 <h1 align="center">know why</h1>
